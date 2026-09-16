@@ -27,14 +27,14 @@ export default function SummariesPage() {
     <div className="max-w-6xl mx-auto space-y-8">
       
       {/* Header & Controls */}
-      <div className="print:hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-xl shadow-[var(--shadow-card)] border border-slate-100">
+      <div className="print:hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl shadow-[var(--shadow-card)] border border-slate-100">
         <div className="flex items-center gap-3">
           <div className="bg-navy/10 p-2 rounded-full text-navy">
             <LayoutDashboard className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Daily Summaries</h1>
-            <p className="text-xs text-slate-500 font-medium mt-1">روزانہ کیٹتھا / روزانہ کھاتہ خلاصہ</p>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 text-start">Daily Summaries (روزانہ کھاتہ خلاصہ)</h1>
+            <p className="text-xs text-slate-500 font-medium mt-1 text-start">Daily Ledger Summary (روزانہ کیٹتھا / روزانہ کھاتہ خلاصہ)</p>
           </div>
         </div>
 
@@ -50,10 +50,10 @@ export default function SummariesPage() {
           </div>
           <button 
             onClick={handlePrint}
-            className="w-full sm:w-auto bg-navy hover:bg-navy/90 text-white px-6 py-2.5 rounded-lg font-semibold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 whitespace-nowrap"
+            className="w-full sm:w-auto bg-navy hover:bg-navy/90 text-white px-4 py-2 rounded font-semibold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 whitespace-nowrap text-sm"
           >
-            <Printer className="h-5 w-5" />
-            Print / Export PDF
+            <Printer className="h-4 w-4" />
+            Print / Export PDF (پرنٹ کریں / PDF میں محفوظ کریں)
           </button>
         </div>
       </div>
@@ -67,28 +67,28 @@ export default function SummariesPage() {
 
         {/* Daily Ledger Summary UI */}
         <div className="bg-navy text-white rounded-xl shadow-[var(--shadow-card)] overflow-hidden print:bg-white print:text-slate-text print:border-2 print:border-navy">
-          <div className="px-4 py-2.5 bg-navy/90 border-b border-white/10 print:bg-navy print:text-white">
-            <h2 className="text-base font-semibold flex justify-between">
-              Daily Ledger Summary <span>روزانہ کھاتہ خلاصہ</span>
+          <div className="px-3 py-2 bg-navy/90 border-b border-white/10 print:bg-navy print:text-white">
+            <h2 className="text-sm font-semibold text-start">
+              Daily Ledger Summary (روزانہ کھاتہ خلاصہ)
             </h2>
           </div>
           
           <div className="overflow-x-auto">
             <table className="w-full text-left whitespace-nowrap">
-              <thead className="bg-black/20 text-xs uppercase font-semibold text-slate-200 print:bg-canvas print:text-slate-600">
+              <thead className="bg-black/20 text-[10px] uppercase font-semibold text-slate-200 print:bg-canvas print:text-slate-600">
                 <tr>
-                  <th className="px-4 py-2.5">Total Bills</th>
-                  <th className="px-4 py-2.5 text-right">Total Weight (Kg)</th>
-                  <th className="px-4 py-2.5 text-right">Total Amount (RS)</th>
-                  <th className="px-4 py-2.5 text-right text-emerald print:text-navy">8% Commission Earned (RS)</th>
+                  <th className="px-3 py-2 text-start">Total Bills (کل بل)</th>
+                  <th className="px-3 py-2 text-end">Total Weight Kg (کل وزن)</th>
+                  <th className="px-3 py-2 text-end">Total Amount RS (کل رقم)</th>
+                  <th className="px-3 py-2 text-end text-emerald print:text-navy">8% Commission Earned RS (8% کمیشن حاصل کیا)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10 print:divide-slate-200">
-                <tr className="text-xl font-bold text-white print:text-slate-900">
-                  <td className="px-4 py-2.5">{MOCK_SALES.length} Invoices</td>
-                  <td className="px-4 py-2.5 text-right">{totalWeight.toLocaleString()}</td>
-                  <td className="px-4 py-2.5 text-right">{totalNetTotal.toLocaleString()}</td>
-                  <td className="px-4 py-2.5 text-right text-emerald print:text-navy">{Math.round(mockCommission).toLocaleString()}</td>
+                <tr className="text-sm font-bold text-white print:text-slate-900">
+                  <td className="px-3 py-2 text-start">{MOCK_SALES.length} Invoices (بلز)</td>
+                  <td className="px-3 py-2 text-end">{totalWeight.toLocaleString()}</td>
+                  <td className="px-3 py-2 text-end">{totalNetTotal.toLocaleString()}</td>
+                  <td className="px-3 py-2 text-end text-emerald print:text-navy">{Math.round(mockCommission).toLocaleString()}</td>
                 </tr>
               </tbody>
             </table>
@@ -97,37 +97,37 @@ export default function SummariesPage() {
 
         {/* Daily Sales Table */}
         <div className="bg-white rounded-xl shadow-[var(--shadow-card)] overflow-hidden print:shadow-none border border-slate-100 print:border-none">
-          <div className="px-4 py-2.5 border-b border-slate-100">
-            <h2 className="text-base font-semibold text-slate-800 flex justify-between">
-              Daily Sales Detail <span>روزانہ سیل کیٹٹھا</span>
+          <div className="px-3 py-2 border-b border-slate-100">
+            <h2 className="text-sm font-semibold text-slate-800 text-start">
+              Daily Sales Detail (روزانہ سیل کیٹٹھا)
             </h2>
           </div>
           
           <div className="overflow-x-auto">
-            <table className="w-full text-left whitespace-nowrap text-sm font-medium text-slate-700">
-              <thead className="bg-canvas border-b border-slate-200 text-xs uppercase font-semibold text-slate-600">
+            <table className="w-full text-left whitespace-nowrap text-xs font-medium text-slate-700">
+              <thead className="bg-canvas border-b border-slate-200 text-[10px] uppercase font-semibold text-slate-600">
                 <tr>
-                  <th className="px-4 py-2.5">Invoice No</th>
-                  <th className="px-4 py-2.5">Customer Name</th>
-                  <th className="px-4 py-2.5 text-right">Total Weight (Kg)</th>
-                  <th className="px-4 py-2.5 text-right">Net Total (RS)</th>
+                  <th className="px-3 py-2 text-start">Invoice No (بل نمبر)</th>
+                  <th className="px-3 py-2 text-start">Customer Name (کسٹمر کا نام)</th>
+                  <th className="px-3 py-2 text-end">Total Weight Kg (کل وزن)</th>
+                  <th className="px-3 py-2 text-end">Net Total RS (خالص کل رقم)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {MOCK_SALES.map((sale) => (
                   <tr key={sale.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-2.5 font-semibold text-slate-800">{sale.invoiceNo}</td>
-                    <td className="px-4 py-2.5">{sale.customer}</td>
-                    <td className="px-4 py-2.5 text-right">{sale.weight.toLocaleString()}</td>
-                    <td className="px-4 py-2.5 text-right font-bold text-slate-900">{sale.netTotal.toLocaleString()} RS</td>
+                    <td className="px-3 py-1 font-semibold text-slate-800 text-start">{sale.invoiceNo}</td>
+                    <td className="px-3 py-1 text-start">{sale.customer}</td>
+                    <td className="px-3 py-1 text-end">{sale.weight.toLocaleString()}</td>
+                    <td className="px-3 py-1 text-end font-bold text-slate-900">{sale.netTotal.toLocaleString()} RS</td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-canvas font-bold border-t-2 border-navy text-xl text-slate-900">
+              <tfoot className="bg-canvas font-bold border-t-2 border-navy text-sm text-slate-900">
                 <tr>
-                  <td colSpan={2} className="px-4 py-2.5 text-right">Grand Total:</td>
-                  <td className="px-4 py-2.5 text-right">{totalWeight.toLocaleString()} Kg</td>
-                  <td className="px-4 py-2.5 text-right">{totalNetTotal.toLocaleString()} RS</td>
+                  <td colSpan={2} className="px-3 py-2 text-end">Grand Total (مجموعی رقم):</td>
+                  <td className="px-3 py-2 text-end">{totalWeight.toLocaleString()} Kg</td>
+                  <td className="px-3 py-2 text-end">{totalNetTotal.toLocaleString()} RS</td>
                 </tr>
               </tfoot>
             </table>

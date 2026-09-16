@@ -11,12 +11,12 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 const navLinks = [
-  { href: '/dashboard', icon: LayoutDashboard, en: 'Dashboard', ur: 'ڈیش بورڈ' },
-  { href: '/billing', icon: FileText, en: 'Billing / Invoice', ur: 'بیوپاری بل' },
-  { href: '/ledger', icon: Users, en: 'Customer Ledger', ur: 'گاھک کھاتہ' },
-  { href: '/cash-receipt', icon: Receipt, en: 'Cash Receipt', ur: 'کیش وصولی' },
-  { href: '/cash-payment', icon: CreditCard, en: 'Cash Payment', ur: 'نام ادائیگی' },
-  { href: '/summaries', icon: LayoutDashboard, en: 'Daily Summaries', ur: 'روزانہ کیٹتھا / چاندنی کھاتہ' },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard (ڈیش بورڈ)' },
+  { href: '/billing', icon: FileText, label: 'Billing / Invoice (بیوپاری بل)' },
+  { href: '/ledger', icon: Users, label: 'Customer Ledger (گاھک کھاتہ)' },
+  { href: '/cash-receipt', icon: Receipt, label: 'Cash Receipt (کیش وصولی)' },
+  { href: '/cash-payment', icon: CreditCard, label: 'Cash Payment (نام ادائیگی)' },
+  { href: '/summaries', icon: LayoutDashboard, label: 'Daily Summaries (روزانہ کیٹتھا / روزانہ کھاتہ خلاصہ)' },
 ];
 
 export function Header() {
@@ -50,20 +50,18 @@ export function Header() {
                 key={link.href} 
                 href={link.href} 
                 className={cn(
-                  "group flex flex-col items-center justify-center text-sm font-medium transition-colors hover:text-emerald",
+                  "group flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-emerald",
                   isActive ? "text-emerald" : "text-white/80"
                 )}
               >
-                <div className="flex items-center gap-1.5">
-                  <link.icon className="h-4 w-4" />
-                  <span>{link.en}</span>
-                </div>
-                <span className="text-[10px] opacity-70 group-hover:opacity-100">{link.ur}</span>
+                <link.icon className="h-4 w-4" />
+                <span>{link.label}</span>
               </Link>
             );
           })}
           
-          <div className="relative ml-4 pl-4 border-l border-white/20">
+          <div className="ml-4 pl-4 border-l border-white/20 flex items-center gap-4">
+
             <button 
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               className="flex items-center gap-2 text-white/80 hover:text-white transition-colors focus:outline-none"
@@ -140,9 +138,8 @@ export function Header() {
                   >
                     <div className="flex items-center gap-3">
                       <link.icon className="h-5 w-5" />
-                      <span className="font-semibold text-base">{link.en}</span>
+                      <span className="font-semibold text-base">{link.label}</span>
                     </div>
-                    <span className="text-xs opacity-70 text-right mt-1" dir="rtl">{link.ur}</span>
                   </Link>
                 );
               })}

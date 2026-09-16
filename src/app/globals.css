@@ -13,6 +13,15 @@
   
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-urdu: var(--font-noto-urdu), serif;
+}
+
+.font-urdu {
+  font-family: var(--font-noto-urdu), serif;
+}
+
+.font-sans {
+  font-family: var(--font-geist-sans), sans-serif;
 }
 
 body {

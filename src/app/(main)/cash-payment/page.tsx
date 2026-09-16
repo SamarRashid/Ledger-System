@@ -1,216 +1,199 @@
 "use client";
 
 import { useState } from "react";
-import { CreditCard, Search, Save, UserCheck, Calendar, X, Clock } from "lucide-react";
+import { CreditCard, Search, Save, X, Clock } from "lucide-react";
 import { cn } from "@/components/layout/Header";
-
-const INITIAL_CUSTOMERS = [
-  { id: 1, name: "Ali Traders", code: "C001", balance: 150000 },
-  { id: 2, name: "Raza Seafoods", code: "C002", balance: 45000 },
-  { id: 3, name: "Hassan & Co", code: "C003", balance: 12000 },
-];
+import { AccountSearchModal, Account } from "@/components/AccountSearchModal";
 
 export default function CashPaymentPage() {
-  const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Account | null>(null);
+  
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<number | "">("");
   const [amountPaid, setAmountPaid] = useState<number | "">("");
-  const [description, setDescription] = useState("Payment Made (بابت مزدوری / advance)");
+  const [description, setDescription] = useState("");
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [recentPayments, setRecentPayments] = useState<any[]>([]);
 
-  const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
-  
-  const currentBalance = selectedCustomer?.balance || 0;
+  // Mock balance
+  const currentBalance = selectedCustomer ? 150000 : 0;
   const paid = Number(amountPaid) || 0;
   const updatedBalance = currentBalance + paid; 
 
   const handleSavePayment = () => {
-    if (!selectedCustomerId || !amountPaid || Number(amountPaid) <= 0) {
+    if (!selectedCustomer || !amountPaid || Number(amountPaid) <= 0) {
       alert("Please select a customer and enter a valid amount.");
       return;
     }
     
-    setCustomers(prev => prev.map(c => 
-      c.id === selectedCustomerId ? { ...c, balance: c.balance + Number(amountPaid) } : c
-    ));
-    
     setRecentPayments(prev => [{
       id: Date.now(),
       date,
-      customerName: selectedCustomer?.name,
+      customerName: selectedCustomer.nameEnglish,
       amount: Number(amountPaid),
       description
     }, ...prev]);
 
-    alert("Payment Saved Successfully!");
+    alert("Cash Payment Saved Successfully!");
     setAmountPaid("");
-    setDescription("Payment Made (بابت مزدوری / advance)");
-    setSelectedCustomerId("");
+    setDescription("");
+    setSelectedCustomer(null);
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-4">
       
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-navy">Cash Payment</h1>
-          <p className="text-sm text-slate-urdu">گاھک نام ادائیگی (Make payment to customer)</p>
+          <h1 className="text-xl font-bold text-navy text-start">Cash Payment (نام ادائیگی)</h1>
         </div>
         <div 
           onClick={() => setIsHistoryOpen(true)}
           className="bg-navy/10 p-2 rounded-full text-navy cursor-pointer hover:bg-navy/20 transition-colors"
           title="Recent Cash Payments"
         >
-          <CreditCard className="h-6 w-6" />
+          <CreditCard className="h-5 w-5" />
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-xl shadow-[var(--shadow-card)] space-y-6 border border-slate-100">
+      <div className="bg-white p-4 rounded-xl shadow-[var(--shadow-card)] space-y-4 border border-slate-300">
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-text mb-1">Date <span className="float-right text-xs text-slate-urdu">تاریخ</span></label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-slate-text/50" />
-              <input 
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald focus:border-emerald transition-shadow"
-              />
-            </div>
+        {/* Horizontal Form Grid */}
+        <div className="flex flex-wrap items-end gap-4" dir="rtl">
+          
+          <div className="w-32">
+            <label className="block text-xs font-bold text-blue-900 mb-1">تاریخ (Date)</label>
+            <input 
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full p-2 border border-slate-300 rounded focus:outline-none focus:border-blue-500 bg-slate-50 text-xs"
+            />
           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-slate-text mb-1">Select Customer <span className="float-right text-xs text-slate-urdu">گاھک</span></label>
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-text/50" />
-              <select 
-                value={selectedCustomerId}
-                onChange={(e) => setSelectedCustomerId(Number(e.target.value))}
-                className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald focus:border-emerald appearance-none bg-white transition-shadow"
-              >
-                <option value="" disabled>Select a customer...</option>
-                {customers.map(c => (
-                  <option key={c.id} value={c.id}>{c.name} ({c.code})</option>
-                ))}
-              </select>
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs font-bold text-blue-900 mb-1">گاہک (Customer)</label>
+            <div className="flex relative">
+              <input 
+                type="text" 
+                value={selectedCustomer ? `${selectedCustomer.code} - ${selectedCustomer.nameUrdu}` : ""} 
+                readOnly 
+                placeholder="گاہک منتخب کریں"
+                className="w-full p-2 border border-slate-300 rounded-r bg-red-50 font-urdu text-sm focus:outline-none cursor-pointer"
+                onClick={() => setIsSearchOpen(true)}
+              />
+              <button onClick={() => setIsSearchOpen(true)} className="bg-blue-100 px-3 border border-r-0 border-slate-300 rounded-l hover:bg-blue-200">
+                <Search className="w-4 h-4 text-blue-800" />
+              </button>
             </div>
           </div>
+
+          <div className="w-40">
+            <label className="block text-xs font-bold text-blue-900 mb-1">رقم (Amount RS)</label>
+            <input 
+              type="number"
+              min="0"
+              value={amountPaid}
+              onChange={(e) => setAmountPaid(Number(e.target.value))}
+              className="w-full p-2 border border-slate-300 rounded focus:outline-none focus:border-blue-500 bg-blue-50 text-sm font-bold text-left text-red-600"
+              dir="ltr"
+            />
+          </div>
+
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs font-bold text-blue-900 mb-1">تفصیل (Description)</label>
+            <input 
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full p-2 border border-slate-300 rounded focus:outline-none focus:border-blue-500 text-sm font-urdu"
+            />
+          </div>
+
+          <button 
+            onClick={handleSavePayment}
+            disabled={!selectedCustomer || !amountPaid || Number(amountPaid) <= 0}
+            className={cn(
+              "px-6 py-2 rounded font-bold text-white transition-all shadow text-sm",
+              selectedCustomer && amountPaid && Number(amountPaid) > 0
+                ? "bg-amber-600 hover:bg-amber-700 active:scale-95" 
+                : "bg-slate-300 cursor-not-allowed text-slate-500"
+            )}
+          >
+            محفوظ کریں (Save)
+          </button>
         </div>
 
         {/* Balance Card */}
         {selectedCustomer && (
-          <div className="bg-navy text-white rounded-xl p-6 shadow-lg relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <UserCheck className="h-24 w-24" />
-            </div>
-            
-            <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-navy text-white rounded p-4 shadow mt-4">
+            <div className="grid grid-cols-3 gap-4" dir="rtl">
               <div>
-                <div className="text-white/70 text-sm mb-1 font-medium">Current Balance</div>
-                <div className="text-2xl font-bold">{currentBalance.toLocaleString()} RS</div>
-                <div className="text-xs text-slate-400 mt-1">Before Payment</div>
+                <div className="text-white/70 text-xs mb-1 font-medium">موجودہ بیلنس (Current Balance)</div>
+                <div className="text-xl font-bold font-sans" dir="ltr">{currentBalance.toLocaleString()} RS</div>
               </div>
               
               <div>
-                <div className="text-white/70 text-sm mb-1 font-medium">Paying Now</div>
-                <div className="text-2xl font-bold text-amber">{paid.toLocaleString()} RS</div>
-                <div className="text-xs text-amber/70 mt-1">Debit Entry</div>
+                <div className="text-white/70 text-xs mb-1 font-medium">ابھی ادا کر رہے ہیں (Paying Now)</div>
+                <div className="text-xl font-bold text-amber-400 font-sans" dir="ltr">{paid.toLocaleString()} RS</div>
               </div>
 
               <div>
-                <div className="text-white/70 text-sm mb-1 font-medium">Updated Balance</div>
-                <div className="text-2xl font-bold text-white">{updatedBalance.toLocaleString()} RS</div>
-                <div className="text-xs text-white/70 mt-1">After Payment</div>
+                <div className="text-white/70 text-xs mb-1 font-medium">اپ ڈیٹ شدہ بیلنس (Updated Balance)</div>
+                <div className="text-xl font-bold text-white font-sans" dir="ltr">{updatedBalance.toLocaleString()} RS</div>
               </div>
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-5 pt-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-text mb-1">Amount Paid (RS) <span className="float-right text-xs text-slate-urdu">رقم</span></label>
-            <input 
-              type="number"
-              min="0"
-              placeholder="0.00"
-              value={amountPaid}
-              onChange={(e) => setAmountPaid(Number(e.target.value))}
-              className="w-full px-4 py-3 text-lg font-bold text-navy border-2 rounded-lg focus:outline-none focus:border-emerald bg-canvas transition-shadow"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-text mb-1">Description <span className="float-right text-xs text-slate-urdu">تفصیل</span></label>
-            <textarea 
-              rows={2}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald focus:border-emerald transition-shadow"
-            />
-          </div>
-        </div>
-
-        <button 
-          onClick={handleSavePayment}
-          disabled={!selectedCustomerId || !amountPaid || Number(amountPaid) <= 0}
-          className={cn(
-            "w-full py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 font-bold text-white transition-all shadow-md text-lg",
-            selectedCustomerId && amountPaid && Number(amountPaid) > 0
-              ? "bg-emerald hover:bg-emerald/90 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-95" 
-              : "bg-slate-200 cursor-not-allowed text-slate-400 shadow-none"
-          )}
-        >
-          <Save className="h-5 w-5" />
-          <span>Save Payment</span>
-        </button>
-
       </div>
+
+      <AccountSearchModal 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
+        onSelect={(acc) => setSelectedCustomer(acc)}
+      />
 
       {/* History Modal */}
       {isHistoryOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
-            <div className="flex justify-between items-center p-6 border-b border-slate-100">
-              <h3 className="font-bold text-navy text-xl flex items-center gap-2">
-                <Clock className="h-5 w-5 text-emerald" />
-                Recent Cash Payments <span className="text-sm font-normal text-slate-urdu">(پچھلی نام ادائیاں)</span>
+          <div className="bg-white rounded shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col border border-slate-300">
+            <div className="flex justify-between items-center p-3 bg-blue-100 border-b border-slate-300">
+              <h3 className="font-bold text-blue-900 text-sm flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Recent Cash Payments (پچھلی نام ادائیاں)
               </h3>
-              <button onClick={() => setIsHistoryOpen(false)} className="text-slate-400 hover:text-red-500">
-                <X className="h-6 w-6" />
+              <button onClick={() => setIsHistoryOpen(false)} className="text-blue-900 hover:bg-blue-200 p-1 rounded">
+                <X className="h-4 w-4" />
               </button>
             </div>
             
-            <div className="p-6 overflow-y-auto">
+            <div className="p-0 overflow-y-auto">
               {recentPayments.length === 0 ? (
-                <div className="text-center py-10 text-slate-500">
+                <div className="text-center py-10 text-slate-500 text-sm">
                   No recent payments found.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left whitespace-nowrap text-sm">
-                    <thead className="bg-canvas border-b border-slate-200">
-                      <tr>
-                        <th className="py-3 px-4 font-semibold text-navy">Date</th>
-                        <th className="py-3 px-4 font-semibold text-navy">Customer</th>
-                        <th className="py-3 px-4 font-semibold text-navy">Description</th>
-                        <th className="py-3 px-4 font-semibold text-navy text-right">Amount (RS)</th>
+                <table className="w-full text-left whitespace-nowrap text-xs border-collapse">
+                  <thead className="bg-slate-100 sticky top-0 z-10 border-b border-slate-300">
+                    <tr>
+                      <th className="p-2 font-medium text-slate-700 border-r border-slate-300">Date (تاریخ)</th>
+                      <th className="p-2 font-medium text-slate-700 border-r border-slate-300">Customer (کسٹمر)</th>
+                      <th className="p-2 font-medium text-slate-700 border-r border-slate-300">Description (تفصیل)</th>
+                      <th className="p-2 font-medium text-slate-700 text-end">Amount (رقم)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {recentPayments.map((r, i) => (
+                      <tr key={r.id} className={`hover:bg-blue-50 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}`}>
+                        <td className="p-2 border-r border-slate-200">{r.date}</td>
+                        <td className="p-2 border-r border-slate-200 font-medium text-blue-900">{r.customerName}</td>
+                        <td className="p-2 border-r border-slate-200 font-urdu">{r.description || "نام ادائیگی"}</td>
+                        <td className="p-2 text-end font-bold text-red-600">{r.amount.toLocaleString()}</td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {recentPayments.map(r => (
-                        <tr key={r.id} className="hover:bg-slate-50">
-                          <td className="py-3 px-4 text-slate-text">{r.date}</td>
-                          <td className="py-3 px-4 font-medium text-navy">{r.customerName}</td>
-                          <td className="py-3 px-4 text-slate-text truncate max-w-[200px]">{r.description}</td>
-                          <td className="py-3 px-4 text-right font-bold text-amber">{r.amount.toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
           </div>

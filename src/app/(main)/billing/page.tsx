@@ -1,334 +1,268 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, Calendar, User, Save, Calculator, X } from "lucide-react";
+import { Search, Save, Calculator, X, Printer, Plus } from "lucide-react";
 import { cn } from "@/components/layout/Header";
+import { AccountSearchModal, Account } from "@/components/AccountSearchModal";
 
-// Mock customer data
-const MOCK_CUSTOMERS = [
-  { id: 1, code: "C001", name: "Ali Traders", subgroup: "Karachi Market", marka: "AT-KHI", phone: "0300-1234567" },
-  { id: 2, code: "C002", name: "Raza Seafoods", subgroup: "Lahore Central", marka: "RSF", phone: "0321-9876543" },
-  { id: 3, code: "C003", name: "Hassan & Co", subgroup: "Islamabad North", marka: "HCN", phone: "0333-5555555" },
-];
+type LineItem = {
+  id: string;
+  item: string;
+  bags: number;
+  weight: number;
+  rate: number;
+  amount: number;
+};
 
 export default function BillingPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<typeof MOCK_CUSTOMERS[0] | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Account | null>(null);
 
+  // Form State
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [weight, setWeight] = useState<number | "">("");
-  const [rate, setRate] = useState<number | "">("");
+  const [billNo, setBillNo] = useState("1001");
+  const [item, setItem] = useState("دیسی گندم");
+  const [bags, setBags] = useState<number | "">(12);
+  const [weight, setWeight] = useState<number | "">(150);
+  const [rate, setRate] = useState<number | "">(21);
+  
+  // Deductions State
   const [freight, setFreight] = useState<number | "">(0);
-  const [labor, setLabor] = useState<number | "">(0);
+  const [labor, setLabor] = useState<number | "">(70);
+  const [otherCharges, setOtherCharges] = useState<number | "">(0);
 
-  // Filter customers
-  const filteredCustomers = MOCK_CUSTOMERS.filter((c) =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Line Items State
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
 
-  // Calculations
-  const calculations = useMemo(() => {
-    const w = Number(weight) || 0;
-    const r = Number(rate) || 0;
-    const f = Number(freight) || 0;
-    const l = Number(labor) || 0;
+  // Derived Values
+  const totalWeight = lineItems.reduce((sum, li) => sum + li.weight, 0);
+  const totalAmount = lineItems.reduce((sum, li) => sum + li.amount, 0);
+  const totalCommission = totalAmount * 0.08; // 8% fixed
+  
+  const totalDeductions = (Number(freight) || 0) + (Number(labor) || 0) + (Number(otherCharges) || 0);
+  const netTotal = totalAmount - totalCommission - totalDeductions;
 
-    const gross = w * r;
-    const commission = gross * 0.08; // Fixed 8%
-    const net = gross - commission - f - l;
+  const handleAddLineItem = () => {
+    if (!item || !weight || !rate) return;
+    const w = Number(weight);
+    const r = Number(rate);
+    const b = Number(bags) || 0;
+    
+    setLineItems([...lineItems, {
+      id: Math.random().toString(36).substring(7),
+      item,
+      bags: b,
+      weight: w,
+      rate: r,
+      amount: w * r
+    }]);
 
-    return { gross, commission, net, freight: f, labor: l };
-  }, [weight, rate, freight, labor]);
-
-  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
-  const [calcInput, setCalcInput] = useState("");
-
-  const handleCalcClick = (val: string) => {
-    if (val === "C") setCalcInput("");
-    else if (val === "=") {
-      try {
-        // eslint-disable-next-line no-eval
-        setCalcInput(eval(calcInput).toString());
-      } catch {
-        setCalcInput("Error");
-      }
-    } else {
-      setCalcInput(prev => prev === "Error" ? val : prev + val);
-    }
+    // Reset inputs
+    setWeight("");
+    setRate("");
+    setBags("");
   };
 
   const handleSaveAndPrint = () => {
-    if (!selectedCustomer || !weight || !rate) {
-      alert("Please fill in Customer, Weight, and Rate.");
+    if (!selectedCustomer || lineItems.length === 0) {
+      alert("Please select a customer and add at least one item.");
       return;
     }
-    alert("Invoice Saved Successfully!");
     window.print();
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-navy">Sales Billing Form</h1>
-          <p className="text-sm text-slate-urdu">بیوپاری بل (Create a new invoice)</p>
-        </div>
-        <div 
-          onClick={() => setIsCalculatorOpen(true)}
-          className="bg-navy/10 p-2 rounded-full text-navy cursor-pointer hover:bg-navy/20 transition-colors"
-        >
-          <Calculator className="h-6 w-6" />
+    <div className="flex flex-col h-[calc(100vh-3rem)] -m-4 bg-slate-200 overflow-hidden">
+      {/* Top Toolbar */}
+      <div className="bg-white border-b border-slate-300 p-1 flex justify-between items-center px-4 shadow-sm shrink-0">
+        <h1 className="font-bold text-blue-900 text-sm">Sales Invoice (سیلز انوائس)</h1>
+        <div className="flex gap-2">
+          <button onClick={handleSaveAndPrint} className="bg-emerald text-white px-3 py-1 rounded text-xs font-bold flex items-center gap-1 hover:bg-emerald/90">
+            <Save className="h-3 w-3" /> Save (محفوظ)
+          </button>
+          <button onClick={() => window.print()} className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold flex items-center gap-1 hover:bg-blue-700">
+            <Printer className="h-3 w-3" /> Print (پرنٹ)
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+      {/* Main Content Split */}
+      <div className="flex flex-1 overflow-hidden p-2 gap-2">
         
-        {/* Left Column - Form Inputs */}
-        <div className="md:col-span-8 space-y-6">
-          <div className="bg-white p-6 rounded-xl shadow-[var(--shadow-card)] space-y-6 border border-slate-100">
-            
-            {/* Customer Search Section */}
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-navy border-b pb-2 flex justify-between items-center">
-                Customer Details <span className="text-sm font-normal text-slate-urdu">گاھک کی تفصیل</span>
-              </h2>
-              <div className="relative">
-                <label className="block text-sm font-medium text-slate-text mb-1">Search Customer</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-text/50" />
-                  <input
-                    type="text"
-                    placeholder="Search by Code or Name..."
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setShowDropdown(true);
-                      setSelectedCustomer(null);
-                    }}
-                    onFocus={() => setShowDropdown(true)}
-                    className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald focus:border-emerald transition-shadow"
-                  />
-                </div>
-                
-                {/* Dropdown Modal Preview */}
-                {showDropdown && searchQuery && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-auto">
-                    {filteredCustomers.length > 0 ? (
-                      <div className="p-2 space-y-1">
-                        {filteredCustomers.map((c) => (
-                          <div 
-                            key={c.id} 
-                            onClick={() => {
-                              setSelectedCustomer(c);
-                              setSearchQuery(c.name);
-                              setShowDropdown(false);
-                            }}
-                            className="flex items-center justify-between p-3 hover:bg-canvas rounded-md cursor-pointer border border-transparent hover:border-slate-200 transition-colors"
-                          >
-                            <div>
-                              <div className="font-bold text-navy">{c.name} <span className="text-xs font-normal text-slate-text bg-slate-100 px-2 py-0.5 rounded ml-2">{c.code}</span></div>
-                              <div className="text-xs text-slate-text mt-1">📞 {c.phone}</div>
-                            </div>
-                            <div className="text-xs text-right">
-                              <div className="font-medium text-slate-text">{c.subgroup}</div>
-                              <div className="text-emerald font-semibold">{c.marka}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-4 text-center text-sm text-slate-text/50">No customers found</div>
-                    )}
-                  </div>
+        {/* Left Pane - Line Items & Totals */}
+        <div className="flex-1 flex flex-col gap-2 min-w-[50%]">
+          {/* Line Items Table */}
+          <div className="flex-1 bg-white border border-slate-300 rounded shadow-sm overflow-auto">
+            <div className="bg-blue-100 border-b border-slate-300 p-1 font-bold text-blue-900 text-center text-xs">
+              بیوپاری سادہ بل بغیر آئٹم
+            </div>
+            <table className="w-full text-xs text-right whitespace-nowrap" dir="rtl">
+              <thead className="bg-slate-100 sticky top-0 border-b border-slate-300">
+                <tr>
+                  <th className="p-1 border-l border-slate-300 w-8 text-center">#</th>
+                  <th className="p-1 border-l border-slate-300">اشیاء (Item)</th>
+                  <th className="p-1 border-l border-slate-300">تعداد (Bags)</th>
+                  <th className="p-1 border-l border-slate-300">وزن کلو (Weight)</th>
+                  <th className="p-1 border-l border-slate-300">ریٹ (Rate)</th>
+                  <th className="p-1">رقم (Amount)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {lineItems.map((li, idx) => (
+                  <tr key={li.id} className="hover:bg-blue-50">
+                    <td className="p-1 border-l border-slate-200 text-center">{idx + 1}</td>
+                    <td className="p-1 border-l border-slate-200 font-urdu">{li.item}</td>
+                    <td className="p-1 border-l border-slate-200">{li.bags}</td>
+                    <td className="p-1 border-l border-slate-200 font-bold">{li.weight}</td>
+                    <td className="p-1 border-l border-slate-200 text-emerald-600 font-bold">{li.rate}</td>
+                    <td className="p-1 font-bold text-blue-900">{li.amount.toLocaleString()}</td>
+                  </tr>
+                ))}
+                {lineItems.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="p-4 text-center text-slate-400">کوئی ریکارڈ نہیں</td>
+                  </tr>
                 )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Totals Section */}
+          <div className="bg-white border border-slate-300 rounded shadow-sm p-2 shrink-0">
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              <div className="space-y-1" dir="rtl">
+                <div className="flex justify-between border-b border-slate-200 pb-1">
+                  <span className="text-slate-600">کل وزن کلو (Total Weight):</span>
+                  <span className="font-bold">{totalWeight}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-200 pb-1">
+                  <span className="text-slate-600">کل رقم (Gross Total):</span>
+                  <span className="font-bold">{totalAmount.toLocaleString()}</span>
+                </div>
               </div>
               
-              {/* Selected Customer Preview */}
-              {selectedCustomer && (
-                <div className="flex items-center gap-4 p-4 bg-canvas border border-slate-200 rounded-lg">
-                  <div className="h-12 w-12 bg-navy rounded-full flex items-center justify-center text-white shadow-sm">
-                    <User className="h-6 w-6" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-bold text-navy text-lg">{selectedCustomer.name} <span className="text-sm font-normal text-slate-text ml-1">({selectedCustomer.code})</span></div>
-                    <div className="text-sm text-slate-text flex items-center justify-between mt-1">
-                      <span>{selectedCustomer.subgroup}</span>
-                      <span className="font-semibold text-emerald bg-emerald/10 px-2 py-0.5 rounded">Marka: {selectedCustomer.marka}</span>
-                    </div>
-                  </div>
+              <div className="space-y-1" dir="rtl">
+                <div className="flex justify-between border-b border-slate-200 pb-1">
+                  <span className="text-slate-600">کل کمیشن (Commission 8%):</span>
+                  <span className="font-bold text-red-600">{totalCommission.toLocaleString()}</span>
                 </div>
-              )}
-            </div>
-
-            {/* Entry Inputs Section */}
-            <div className="space-y-4 pt-4">
-              <h2 className="text-lg font-semibold text-navy border-b pb-2 flex justify-between items-center">
-                Invoice Details <span className="text-sm font-normal text-slate-urdu">بل کی تفصیل</span>
-              </h2>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-sm font-medium text-slate-text mb-1">Date <span className="float-right text-xs text-slate-urdu">تاریخ</span></label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-slate-text/50" />
-                    <input 
-                      type="date"
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald focus:border-emerald transition-shadow"
-                    />
-                  </div>
+                <div className="flex justify-between border-b border-slate-200 pb-1">
+                  <span className="text-slate-600">مزید خرچہ (Deductions):</span>
+                  <span className="font-bold text-red-600">{totalDeductions.toLocaleString()}</span>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-text mb-1">Total Weight (Kg) <span className="float-right text-xs text-slate-urdu">وزن</span></label>
-                  <input 
-                    type="number"
-                    min="0"
-                    placeholder="0.00"
-                    value={weight}
-                    onChange={(e) => setWeight(Number(e.target.value))}
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald focus:border-emerald transition-shadow font-medium"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-slate-text mb-1">Rate per Unit (RS) <span className="float-right text-xs text-slate-urdu">قیمت</span></label>
-                  <input 
-                    type="number"
-                    min="0"
-                    placeholder="0.00"
-                    value={rate}
-                    onChange={(e) => setRate(Number(e.target.value))}
-                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald focus:border-emerald transition-shadow bg-canvas font-bold text-lg text-navy"
-                  />
+                <div className="flex justify-between bg-emerald-100 p-1 rounded mt-2">
+                  <span className="font-bold text-emerald-900">خالص بل رقم (Net Total):</span>
+                  <span className="font-black text-emerald-900 text-sm">{netTotal.toLocaleString()} RS</span>
                 </div>
               </div>
             </div>
-
-            {/* Deductions Section */}
-            <div className="space-y-4 pt-4">
-              <h2 className="text-lg font-semibold text-navy border-b pb-2 flex justify-between items-center">
-                Deductions <span className="text-sm font-normal text-slate-urdu">کٹوتیاں</span>
-              </h2>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-sm font-medium text-slate-text mb-1">Freight Charges (RS) <span className="float-right text-xs text-slate-urdu">گاڑی کرایہ</span></label>
-                  <input 
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={freight}
-                    onChange={(e) => setFreight(Number(e.target.value))}
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald focus:border-emerald transition-shadow"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-text mb-1">Labor Charges (RS) <span className="float-right text-xs text-slate-urdu">مزدوری</span></label>
-                  <input 
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={labor}
-                    onChange={(e) => setLabor(Number(e.target.value))}
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald focus:border-emerald transition-shadow"
-                  />
-                </div>
-              </div>
-            </div>
-
           </div>
         </div>
 
-        {/* Right Column - Calculations Summary */}
-        <div className="md:col-span-4">
-          <div className="bg-white p-6 rounded-xl shadow-[var(--shadow-card)] sticky top-24 border border-slate-100">
-            <h2 className="text-lg font-bold text-navy border-b pb-3 mb-5 flex justify-between items-center">
-              Summary <span className="font-normal text-sm text-slate-urdu">خلاصہ</span>
-            </h2>
-            
-            <div className="space-y-4">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-text font-medium">Gross Total</span>
-                <span className="font-bold text-navy">{calculations.gross.toLocaleString()} RS</span>
-              </div>
-              
-              <div className="flex justify-between items-center text-sm pt-2">
-                <span className="text-slate-text font-medium text-amber">Commission (8% Fixed)</span>
-                <span className="font-bold text-amber">- {calculations.commission.toLocaleString()} RS</span>
-              </div>
-              <div className="text-[10px] text-slate-text/50 text-right -mt-3 italic">Non-editable</div>
-              
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-text font-medium text-red-500">Freight</span>
-                <span className="font-bold text-red-500">- {calculations.freight.toLocaleString()} RS</span>
-              </div>
-
-              <div className="flex justify-between items-center text-sm border-b pb-4">
-                <span className="text-slate-text font-medium text-red-500">Labor</span>
-                <span className="font-bold text-red-500">- {calculations.labor.toLocaleString()} RS</span>
-              </div>
-
-              <div className="flex flex-col pt-2 bg-canvas p-4 rounded-lg border border-slate-200">
-                <span className="font-bold text-sm text-slate-text mb-1">Net Total Calculation</span>
-                <span className="font-black text-3xl text-navy tracking-tight">{calculations.net.toLocaleString()} <span className="text-xl">RS</span></span>
-              </div>
+        {/* Right Pane - Inputs & Deductions */}
+        <div className="w-[45%] flex flex-col gap-2 shrink-0">
+          
+          {/* Header Form */}
+          <div className="bg-white border border-slate-300 rounded shadow-sm flex flex-col p-2 gap-2 text-xs" dir="rtl">
+            <div className="flex gap-2 items-center">
+              <label className="w-16 shrink-0 font-bold text-blue-900">تاریخ (Date)</label>
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} className="border border-slate-300 p-1 w-32 bg-slate-50" />
+              <label className="w-16 shrink-0 font-bold text-blue-900 mr-4">بل نمبر (Bill No)</label>
+              <input type="text" value={billNo} onChange={e => setBillNo(e.target.value)} className="border border-slate-300 p-1 w-24 bg-slate-50" />
             </div>
 
-            <button 
-              onClick={handleSaveAndPrint}
-              disabled={!selectedCustomer || !weight || !rate}
-              className={cn(
-                "w-full mt-8 py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 font-bold text-white transition-all shadow-md text-lg print:hidden",
-                selectedCustomer && weight && rate 
-                  ? "bg-emerald hover:bg-emerald/90 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-95" 
-                  : "bg-slate-200 cursor-not-allowed text-slate-400 shadow-none"
-              )}
-            >
-              <Save className="h-5 w-5" />
-              <span>Save & Print Invoice</span>
-            </button>
+            <div className="flex gap-2 items-center mt-1">
+              <label className="w-16 shrink-0 font-bold text-blue-900">خریدار (Buyer)</label>
+              <div className="flex flex-1 relative">
+                <input 
+                  type="text" 
+                  value={selectedCustomer ? `${selectedCustomer.code} - ${selectedCustomer.nameUrdu}` : ""} 
+                  readOnly 
+                  placeholder="خریدار منتخب کریں"
+                  className="border border-slate-300 p-1 flex-1 bg-green-50 font-urdu font-bold focus:outline-none cursor-pointer"
+                  onClick={() => setIsSearchOpen(true)}
+                />
+                <button onClick={() => setIsSearchOpen(true)} className="absolute left-0 top-0 bottom-0 bg-blue-100 px-2 border border-slate-300 hover:bg-blue-200">
+                  <Search className="w-3 h-3 text-blue-800" />
+                </button>
+              </div>
+            </div>
+            {selectedCustomer && (
+              <div className="flex gap-2 items-center text-[10px] text-slate-500 mr-[72px]">
+                <span>مارکہ: <strong className="text-emerald-700">{selectedCustomer.marka || '-'}</strong></span>
+                <span>|</span>
+                <span>گروپ: <strong>{selectedCustomer.subGroup}</strong></span>
+              </div>
+            )}
           </div>
+
+          {/* Item Entry Form */}
+          <div className="bg-white border border-slate-300 rounded shadow-sm flex flex-col p-2 gap-2 text-xs" dir="rtl">
+            <div className="grid grid-cols-6 gap-2">
+              <div className="col-span-3">
+                <label className="block text-[10px] font-bold text-slate-600 mb-0.5">اشیاء (Item)</label>
+                <input type="text" value={item} onChange={e => setItem(e.target.value)} className="border border-slate-300 p-1 w-full font-urdu bg-green-50" />
+              </div>
+              <div className="col-span-1">
+                <label className="block text-[10px] font-bold text-slate-600 mb-0.5">تعداد (Bags)</label>
+                <input type="number" value={bags} onChange={e => setBags(Number(e.target.value))} className="border border-slate-300 p-1 w-full bg-green-50" />
+              </div>
+              <div className="col-span-2 text-left">
+                <label className="block text-[10px] font-bold text-slate-600 mb-0.5 opacity-0">Action</label>
+                <button onClick={handleAddLineItem} className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 font-bold flex items-center gap-1 w-full justify-center">
+                  <Plus className="w-3 h-3" /> شامل کریں
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-6 gap-2 mt-1">
+              <div className="col-span-2">
+                <label className="block text-[10px] font-bold text-slate-600 mb-0.5">وزن کلو (Weight)</label>
+                <input type="number" value={weight} onChange={e => setWeight(Number(e.target.value))} className="border border-slate-300 p-1 w-full bg-blue-50 font-bold text-sm" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-[10px] font-bold text-slate-600 mb-0.5">ریٹ فی کلو (Rate)</label>
+                <input type="number" value={rate} onChange={e => setRate(Number(e.target.value))} className="border border-slate-300 p-1 w-full bg-blue-50 font-bold text-sm text-red-600" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-[10px] font-bold text-slate-600 mb-0.5">کل رقم (Amount)</label>
+                <div className="border border-slate-300 p-1 w-full bg-slate-100 font-bold text-sm text-left">
+                  {((Number(weight)||0) * (Number(rate)||0)).toLocaleString()}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Deductions Table */}
+          <div className="flex-1 bg-white border border-slate-300 rounded shadow-sm flex flex-col overflow-hidden text-xs" dir="rtl">
+            <div className="bg-pink-100 border-b border-slate-300 p-1 font-bold text-pink-900 text-center text-xs">
+              مزید بل خرچہ (Deductions)
+            </div>
+            <div className="flex-1 overflow-auto p-2 space-y-2">
+              <div className="flex justify-between items-center bg-slate-50 p-1 border border-slate-200">
+                <span className="font-urdu">کرایہ توکل (Freight)</span>
+                <input type="number" value={freight} onChange={e => setFreight(Number(e.target.value))} className="w-24 p-1 border border-slate-300 text-left" />
+              </div>
+              <div className="flex justify-between items-center bg-slate-50 p-1 border border-slate-200">
+                <span className="font-urdu">مزدوری فی من (Labor)</span>
+                <input type="number" value={labor} onChange={e => setLabor(Number(e.target.value))} className="w-24 p-1 border border-slate-300 text-left" />
+              </div>
+              <div className="flex justify-between items-center bg-slate-50 p-1 border border-slate-200">
+                <span className="font-urdu">متفرق خرچہ (Other Charges)</span>
+                <input type="number" value={otherCharges} onChange={e => setOtherCharges(Number(e.target.value))} className="w-24 p-1 border border-slate-300 text-left" />
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
-      {/* Calculator Modal */}
-      {isCalculatorOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center print:hidden">
-          <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-navy text-lg">Calculator</h3>
-              <button onClick={() => setIsCalculatorOpen(false)} className="text-slate-400 hover:text-red-500">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="bg-slate-100 p-4 rounded-xl mb-4 text-right text-2xl font-mono text-navy h-16 flex items-center justify-end overflow-hidden">
-              {calcInput || "0"}
-            </div>
-            <div className="grid grid-cols-4 gap-2">
-              {['7', '8', '9', '/', '4', '5', '6', '*', '1', '2', '3', '-', 'C', '0', '=', '+'].map((btn) => (
-                <button
-                  key={btn}
-                  onClick={() => handleCalcClick(btn)}
-                  className={cn(
-                    "p-4 text-xl font-medium rounded-xl transition-all active:scale-95",
-                    btn === 'C' ? "bg-red-100 text-red-600 hover:bg-red-200" :
-                    btn === '=' ? "bg-emerald text-white hover:bg-emerald/90" :
-                    ['/', '*', '-', '+'].includes(btn) ? "bg-navy/10 text-navy hover:bg-navy/20" :
-                    "bg-slate-50 hover:bg-slate-100 text-slate-800"
-                  )}
-                >
-                  {btn}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
+      <AccountSearchModal 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
+        onSelect={(acc) => {
+          setSelectedCustomer(acc);
+        }}
+      />
     </div>
   );
 }
