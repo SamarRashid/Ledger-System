@@ -1,26 +1,53 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-navy: #1E1B4B; /* Indigo Navy */
+  --color-emerald: #7C3AED; /* Radiant Violet */
+  --color-amber: #0D9488; /* Vibrant Teal */
+  --color-canvas: #F3F4F6; /* Soft Warm Tint */
+  --color-slate-text: #475569;
+  --color-slate-heading: #0F172A;
+  --color-slate-urdu: #64748B;
+  
+  --shadow-card: 0 10px 15px -3px rgba(0,0,0,0.05);
+  
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-slate-text);
+  font-family: Arial, Helvetica, sans-serif;
+  direction: ltr; /* Keeping LTR by default, but labels will be mixed */
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@media print {
+  body {
+    background-color: #FFFFFF !important;
+  }
+  
+  .print\:hidden {
+    display: none !important;
+  }
+  
+  /* Ensure tables stretch correctly without horizontal scroll cutoffs */
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+  
+  table {
+    width: 100% !important;
+    page-break-inside: auto;
+  }
+  
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+  
+  /* Hide URL links that browsers sometimes insert */
+  a[href]:after {
+    content: none !important;
+  }
 }
