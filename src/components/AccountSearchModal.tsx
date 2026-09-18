@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { Search, X } from "lucide-react";
 
-export type Account = {
+export interface Account {
   id: number;
   code: string;
   nameUrdu: string;
   marka: string;
   subGroup: string;
   nameEnglish: string;
-};
+}
 
 // Mock Accounts
 export const MOCK_ACCOUNTS: Account[] = [
@@ -33,7 +33,7 @@ interface Props {
 }
 
 export function AccountSearchModal({ isOpen, onClose, onSelect, typeFilter }: Props) {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   if (!isOpen) return null;
 

@@ -6,10 +6,10 @@ import { Lock, Mail, ArrowRight, Hexagon } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +32,7 @@ export default function LoginPage() {
         
         {/* Header Section */}
         <div className="bg-[#0F172A] p-8 text-center text-white flex flex-col items-center">
-          <div className="h-12 w-12 bg-[#10B981] rounded-xl flex items-center justify-center mb-4 shadow-sm">
+          <div className="h-12 w-12 bg-[#06b6d4] rounded-xl flex items-center justify-center mb-4 shadow-sm">
             <Hexagon className="h-6 w-6 text-white fill-white" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight mb-2">LedgerSystem</h1>
@@ -61,7 +61,7 @@ export default function LoginPage() {
                   placeholder="admin@gmail.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#10B981] focus:border-[#10B981] bg-[#F8FAFC] text-[#0F172A]"
+                  className="w-full pl-10 pr-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#06b6d4] focus:border-[#06b6d4] bg-[#F8FAFC] text-[#0F172A]"
                 />
               </div>
             </div>
@@ -71,7 +71,7 @@ export default function LoginPage() {
                 <label className="block text-sm font-bold text-[#0F172A]">
                   Password
                 </label>
-                <a href="#" className="text-xs text-[#10B981] hover:text-emerald-600 hover:underline font-bold transition-colors">
+                <a href="#" className="text-xs text-[#06b6d4] hover:text-cyan-600 hover:underline font-bold transition-colors">
                   Forgot password?
                 </a>
               </div>
@@ -83,7 +83,7 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#10B981] focus:border-[#10B981] bg-[#F8FAFC] text-[#0F172A]"
+                  className="w-full pl-10 pr-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#06b6d4] focus:border-[#06b6d4] bg-[#F8FAFC] text-[#0F172A]"
                 />
               </div>
             </div>
@@ -93,7 +93,7 @@ export default function LoginPage() {
                 id="remember-me" 
                 name="remember-me" 
                 type="checkbox" 
-                className="h-4 w-4 rounded border-[#E2E8F0] accent-[#10B981] cursor-pointer"
+                className="h-4 w-4 rounded border-[#E2E8F0] accent-[#06b6d4] cursor-pointer"
               />
               <label htmlFor="remember-me" className="ml-2 block text-sm font-bold text-slate-600 cursor-pointer">
                 Remember me
@@ -103,7 +103,7 @@ export default function LoginPage() {
             <button 
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 px-4 rounded-lg bg-[#10B981] hover:bg-emerald-600 text-white font-bold flex items-center justify-center gap-2 transition-colors active:scale-[0.98] shadow-sm disabled:opacity-70 disabled:active:scale-100"
+              className="w-full py-3 px-4 rounded-lg bg-[#06b6d4] hover:bg-cyan-600 text-white font-bold flex items-center justify-center gap-2 transition-colors active:scale-[0.98] shadow-sm disabled:opacity-70 disabled:active:scale-100"
             >
               {isLoading ? (
                 <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

@@ -109,19 +109,6 @@ export default function CashPaymentPage() {
               className="w-full p-2 border border-slate-300 rounded focus:outline-none focus:border-blue-500 text-sm font-urdu"
             />
           </div>
-
-          <button 
-            onClick={handleSavePayment}
-            disabled={!selectedCustomer || !amountPaid || Number(amountPaid) <= 0}
-            className={cn(
-              "px-6 py-2 rounded font-bold text-white transition-all shadow text-sm",
-              selectedCustomer && amountPaid && Number(amountPaid) > 0
-                ? "bg-amber-600 hover:bg-amber-700 active:scale-95" 
-                : "bg-slate-300 cursor-not-allowed text-slate-500"
-            )}
-          >
-            محفوظ کریں (Save)
-          </button>
         </div>
 
         {/* Balance Card */}
@@ -199,6 +186,31 @@ export default function CashPaymentPage() {
           </div>
         </div>
       )}
+
+      {/* BOTTOM ACTION BAR */}
+      <div className="-mx-4 sm:-mx-6 lg:-mx-8 bg-white border-t border-slate-200 p-4 z-30 flex justify-end gap-3 px-6 print:hidden mt-8 rounded-b-xl shadow-sm">
+        <button
+          type="button"
+          className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors"
+        >
+          <X className="h-4 w-4" />
+          Cancel (منسوخ کریں)
+        </button>
+        <button
+          type="button"
+          onClick={handleSavePayment}
+          disabled={!selectedCustomer || !amountPaid || Number(amountPaid) <= 0}
+          className={cn(
+            "px-8 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-sm",
+            selectedCustomer && amountPaid && Number(amountPaid) > 0
+              ? "bg-[#06b6d4] hover:bg-cyan-600 text-white" 
+              : "bg-slate-300 text-slate-500 cursor-not-allowed shadow-none"
+          )}
+        >
+          <Save className="h-4 w-4" />
+          (Save) محفوظ کریں
+        </button>
+      </div>
 
     </div>
   );

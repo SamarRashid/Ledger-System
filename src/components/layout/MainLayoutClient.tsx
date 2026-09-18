@@ -11,7 +11,7 @@ export function MainLayoutClient({ children }: { children: React.ReactNode }) {
   return (
     <div className="h-screen flex flex-col bg-[#F8FAFC] overflow-hidden">
       {/* Fixed Full-Width Header */}
-      <Header onMobileMenuClick={() => setIsMobileOpen(true)} isSidebarPinned={isPinned} />
+      <Header onMobileMenuClick={() => setIsMobileOpen(true)} isSidebarPinned={isPinned} setIsSidebarPinned={setIsPinned} />
 
       {/* Main Container below Header */}
       <div className="flex flex-1 overflow-hidden">

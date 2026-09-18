@@ -15,7 +15,8 @@ import {
   Pin,
   PinOff,
   LogOut,
-  X
+  X,
+  User
 } from "lucide-react";
 import { cn } from "@/components/layout/Header";
 
@@ -40,14 +41,14 @@ interface SidebarProps {
 
 export function Sidebar({ isPinned, setIsPinned, isMobileOpen, setIsMobileOpen }: SidebarProps) {
   const pathname = usePathname();
-  const [isHovered, setIsHovered] = useState(false);
+  const [isHovered, setIsHovered] = useState<boolean>(false);
 
   const isExpandedDesktop = isPinned || isHovered;
 
   return (
     <aside 
       className={cn(
-        "z-30 h-full bg-[#0F172A] text-white transition-all duration-300 ease-in-out flex flex-col shadow-xl border-r border-[#334155]/30",
+        "z-50 h-full bg-[#083D77] text-white transition-all duration-300 ease-in-out flex flex-col shadow-xl border-r border-[#D9F0FF]/30",
         isExpandedDesktop ? "w-64" : "w-20",
         isMobileOpen ? "fixed inset-y-0 left-0 translate-x-0 w-64" : "hidden md:flex md:translate-x-0 relative"
       )}
@@ -65,19 +66,7 @@ export function Sidebar({ isPinned, setIsPinned, isMobileOpen, setIsMobileOpen }
         </button>
       )}
 
-      {/* Pin Toggle for Desktop */}
-      <div className={cn(
-        "hidden md:flex justify-end px-4 py-2 transition-opacity duration-300 shrink-0",
-        isExpandedDesktop ? "opacity-100" : "opacity-0 hidden"
-      )}>
-        <button 
-          onClick={() => setIsPinned(!isPinned)}
-          className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 hover:text-white transition-colors bg-white/5 px-2 py-1 rounded-md mt-2"
-        >
-          {isPinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
-          {isPinned ? "Unpin" : "Pin"}
-        </button>
-      </div>
+
 
       {/* Spacer for unpinned state top padding */}
       {!isExpandedDesktop && <div className="h-6 shrink-0"></div>}
@@ -92,14 +81,14 @@ export function Sidebar({ isPinned, setIsPinned, isMobileOpen, setIsMobileOpen }
               onClick={() => setIsMobileOpen && setIsMobileOpen(false)}
               className={cn(
                 "group relative flex items-center h-[46px] rounded-lg transition-all duration-200 cursor-pointer overflow-hidden whitespace-nowrap shrink-0",
-                isActive ? "bg-[#10B981] text-white font-semibold shadow-md" : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
+                isActive ? "bg-[#FEFFFEd] text-white font-semibold shadow-md mx-1" : "text-slate-300 hover:bg-slate-800/80 hover:text-[#23232] mx-1"
               )}
               title={(!isExpandedDesktop && !isMobileOpen) ? `${link.labelEn} - ${link.labelUr}` : undefined}
             >
               <div className="flex-shrink-0 w-[52px] flex justify-center items-center">
                 <link.icon className={cn(
                   "h-[20px] w-[20px] transition-transform duration-200",
-                  isActive ? "text-white" : "text-slate-400 group-hover:text-[#10B981]"
+                  isActive ? "text-white" : "text-slate-400 group-hover:text-[#D9F0FF]"
                 )} />
               </div>
               <div className={cn(
@@ -107,7 +96,7 @@ export function Sidebar({ isPinned, setIsPinned, isMobileOpen, setIsMobileOpen }
                 (isExpandedDesktop || isMobileOpen) ? "opacity-100" : "opacity-0 hidden"
               )}>
                 <span className="text-[14px] tracking-wide">{link.labelEn}</span>
-                <span className={cn("font-urdu text-[12px]", isActive ? "text-[#D1FAE5]" : "text-slate-500")}>{link.labelUr}</span>
+                <span className={cn("font-urdu text-[12px]", isActive ? "text-[#ffff]" : "text-slate-500")}>{link.labelUr}</span>
               </div>
             </Link>
           );
@@ -119,13 +108,14 @@ export function Sidebar({ isPinned, setIsPinned, isMobileOpen, setIsMobileOpen }
         "p-4 shrink-0 mt-auto transition-all duration-300",
         (isExpandedDesktop || isMobileOpen) ? "opacity-100" : "opacity-0 hidden absolute pointer-events-none"
       )}>
-        <div className="bg-slate-800/80 rounded-xl p-3 flex items-center justify-between border border-[#334155]/50 shadow-inner">
+        <div className="bg-slate-800/80 rounded-xl p-3 flex items-center justify-between border border-[#]/50 shadow-inner">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="h-8 w-8 bg-[#10B981] rounded-full flex items-center justify-center shrink-0 shadow-sm">
-              <span className="text-xs font-black text-white">A</span>
+            <div className="h-8 w-8 bg-[#ffFF] rounded-full flex items-center justify-center shrink-0 shadow-sm">
+              <User className="h-4 w-4 text-white" />
             </div>
             <div className="flex flex-col truncate">
               <span className="text-sm font-bold text-white truncate">Admin</span>
+              <span className="text-[10px] text-slate-400 truncate">Ledger System</span>
             </div>
           </div>
           <Link
