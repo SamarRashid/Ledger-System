@@ -5,31 +5,31 @@ import { Sidebar } from "./Sidebar";
 import { cn } from "./Header";
 
 export function MainLayoutClient({ children }: { children: React.ReactNode }) {
-  const [isPinned, setIsPinned] = useState(true); // Default to pinned so it looks good on large screens initially
+  const [isPinned, setIsPinned] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      {/* Sidebar */}
-      <Sidebar 
-        isPinned={isPinned} 
-        setIsPinned={setIsPinned} 
-        isMobileOpen={isMobileOpen}
-        setIsMobileOpen={setIsMobileOpen}
-      />
+    <div className="h-screen flex flex-col bg-[#F8FAFC] overflow-hidden">
+      {/* Fixed Full-Width Header */}
+      <Header onMobileMenuClick={() => setIsMobileOpen(true)} isSidebarPinned={isPinned} />
 
-      {/* Main Content Area */}
-      {/* The margin transitions smoothly based on the pinned state. */}
-      <div 
-        className={cn(
-          "flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out",
-          isPinned ? "md:ml-72" : "md:ml-20"
-        )}
-      >
-        <Header onMobileMenuClick={() => setIsMobileOpen(true)} />
-        
-        <main className="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 overflow-x-hidden">
-          {children}
+      {/* Main Container below Header */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <Sidebar 
+          isPinned={isPinned} 
+          setIsPinned={setIsPinned} 
+          isMobileOpen={isMobileOpen}
+          setIsMobileOpen={setIsMobileOpen}
+        />
+
+        {/* Scrollable Content Area */}
+        <main 
+          className="flex-1 h-full overflow-y-auto transition-all duration-300 ease-in-out px-4 sm:px-6 lg:px-8 py-6"
+        >
+          <div className="w-full pb-20">
+            {children}
+          </div>
         </main>
       </div>
 

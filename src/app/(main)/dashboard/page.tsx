@@ -1,19 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { 
   TrendingUp, 
   Wallet, 
   Users, 
   FileText,
-  PlusCircle,
-  ArrowRight,
-  ArrowUpRight,
-  ArrowDownRight,
-  Clock,
+  BookOpen,
   List,
-  BookOpen
+  Calendar
 } from "lucide-react";
 import { 
   AreaChart, 
@@ -26,238 +22,277 @@ import {
 } from "recharts";
 import { cn } from "@/components/layout/Header";
 
-// Mock Data for Charts
-const salesDataWeek = [
-  { name: 'Mon', revenue: 1500 }, { name: 'Tue', revenue: 2300 }, { name: 'Wed', revenue: 3400 },
-  { name: 'Thu', revenue: 2800 }, { name: 'Fri', revenue: 4500 }, { name: 'Sat', revenue: 6000 },
-  { name: 'Sun', revenue: 4800 },
-];
-const salesDataMonth = [
-  { name: 'Week 1', revenue: 12000 }, { name: 'Week 2', revenue: 18000 },
-  { name: 'Week 3', revenue: 15000 }, { name: 'Week 4', revenue: 24000 },
-];
-const salesDataYear = [
-  { name: 'Jan', revenue: 45000 }, { name: 'Feb', revenue: 52000 }, { name: 'Mar', revenue: 48000 },
-  { name: 'Apr', revenue: 61000 }, { name: 'May', revenue: 59000 }, { name: 'Jun', revenue: 75000 },
-];
+// Generate 30 days of mock data for date filtering
+const generateMockData = () => {
+  const data = [];
+  const today = new Date();
+  const start = new Date(today);
+  start.setDate(start.getDate() - 30); 
+  
+  for (let i = 0; i <= 30; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    
+    // Add distinct dramatic waves to make the chart look incredibly premium
+    const baseValue = 2500;
+    const wave = Math.sin(i / 1.5) * 800 + Math.cos(i / 2.2) * 400;
+    const trend = i * 35;
+    
+    data.push({
+      dateStr: d.toISOString().split('T')[0],
+      name: d.toLocaleDateString('en-US', { weekday: 'short' }),
+      revenue: Math.max(500, baseValue + wave + trend),
+    });
+  }
+  return data;
+};
+
+const fullMockData = generateMockData();
 
 export default function DashboardPage() {
-  const [chartFilter, setChartFilter] = useState<'week' | 'month' | 'year'>('week');
+  const todayStr = new Date().toISOString().split('T')[0];
+  const lastWeekStr = new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0];
   
-  const getChartData = () => {
-    if (chartFilter === 'month') return salesDataMonth;
-    if (chartFilter === 'year') return salesDataYear;
-    return salesDataWeek;
-  };
+  const [fromDate, setFromDate] = useState<string>(lastWeekStr);
+  const [toDate, setToDate] = useState<string>(todayStr);
+  const [currentDateStr, setCurrentDateStr] = useState<string>("");
+
+  useEffect(() => {
+    const d = new Date();
+    const formattedDate = d.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+    const formattedDay = d.toLocaleDateString('en-US', { weekday: 'short' });
+    setCurrentDateStr(`${formattedDate}, ${formattedDay}`);
+  }, []);
+
+  const filteredData = useMemo(() => {
+    return fullMockData.filter((item) => {
+      const itemDate = item.dateStr;
+      const isAfterFrom = fromDate ? itemDate >= fromDate : true;
+      const isBeforeTo = toDate ? itemDate <= toDate : true;
+      return isAfterFrom && isBeforeTo;
+    });
+  }, [fromDate, toDate]);
 
   return (
     <div className="space-y-6">
       
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 text-start flex items-center gap-2">
-            Dashboard <span className="font-urdu text-lg font-normal">(ڈیش بورڈ)</span>
-          </h1>
-          <p className="text-xs text-slate-500 font-medium mt-1 text-start flex gap-1">
-            Overview of today's activities <span className="font-urdu text-[11px]">(آج کی سرگرمیوں کا جائزہ)</span>
-          </p>
-        </div>
-        <div className="flex gap-3 w-full sm:w-auto">
-          <Link 
-            href="/billing"
-            className="flex-1 sm:flex-none bg-[#7c3aed] hover:bg-[#6d28d9] text-white px-5 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all shadow-sm text-sm"
-          >
-            <PlusCircle className="h-4 w-4" />
-            New Invoice (نیا بل)
-          </Link>
-          <Link 
-            href="/cash-receipt"
-            className="flex-1 sm:flex-none bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 px-5 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all shadow-sm text-sm"
-          >
-            <Wallet className="h-4 w-4 text-slate-500" />
-            Receive Cash (کیش وصولی)
-          </Link>
-        </div>
+      {/* Top Greeting Section */}
+      <div className="flex flex-col mb-2">
+        <h1 className="text-xl md:text-2xl font-black text-[#0F172A] tracking-tight">
+          Welcome back
+        </h1>
+        <p className="text-[14px] font-medium text-[#334155] mt-1">
+          {currentDateStr || "Loading..."}
+        </p>
       </div>
 
-      {/* Customer Ledger Banner (Replaced Inventory Alert) */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-            <Users className="h-5 w-5" />
-          </div>
-          <div>
-            <h4 className="text-blue-900 font-bold text-sm">Customer Ledger (گاہک کھاتہ)</h4>
-            <p className="text-blue-700 text-xs mt-0.5 font-medium">View all your customer accounts and balances</p>
-          </div>
-        </div>
-        <Link href="/ledger" className="text-blue-700 text-sm font-bold flex items-center gap-1 hover:underline">
-          View All <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
-
-      {/* 4 Top Boxes */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 4 Top Boxes - KPI Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
         
         {/* Today's Sales */}
-        <Link href="/summaries" className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-[#7c3aed] hover:-translate-y-1 hover:shadow-md transition-all cursor-pointer block">
-          <div className="flex justify-between items-start">
-            <p className="text-xs font-medium text-slate-500 flex gap-1">Today's Sales <span className="font-urdu">(آج کی فروخت)</span></p>
-            <div className="p-1.5 bg-[#7c3aed]/10 text-[#7c3aed] rounded-md">
-              <TrendingUp className="h-4 w-4" />
-            </div>
+        <Link href="/summaries" className="bg-white p-5 lg:p-6 rounded-2xl shadow-sm border border-[#E2E8F0] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex justify-between items-center relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#F8FAFC] rounded-bl-[100px] -mr-8 -mt-8 pointer-events-none group-hover:scale-110 transition-transform duration-500"></div>
+          <div className="flex flex-col relative z-10">
+            <h3 className="text-base font-black text-[#334155] mb-2 flex flex-wrap items-center gap-1.5 group-hover:text-[#0F172A] transition-colors">
+              Today's Sales <span className="font-urdu text-xs font-normal text-slate-400">(آج کی فروخت)</span>
+            </h3>
+            <div className="text-xl font-bold text-[#0F172A] tracking-tight">2,450,000 <span className="text-xs font-bold text-slate-400 ml-0.5">RS</span></div>
           </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-bold text-slate-900">2,450,000 RS</h3>
-            <p className="text-xs font-medium text-[#7c3aed] mt-2 flex items-center gap-1">
-              <ArrowUpRight className="h-3 w-3" /> +12% from yesterday <span className="font-urdu">(کل سے 12% زیادہ)</span>
-            </p>
+          <div className="h-11 w-11 lg:h-12 lg:w-12 bg-[#10B981]/10 text-[#10B981] rounded-full flex items-center justify-center shrink-0 z-10">
+            <TrendingUp className="h-5 w-5" />
           </div>
         </Link>
 
         {/* Cash Received */}
-        <Link href="/cash-receipt" className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-slate-800 hover:-translate-y-1 hover:shadow-md transition-all cursor-pointer block">
-          <div className="flex justify-between items-start">
-            <p className="text-xs font-medium text-slate-500 flex gap-1">Cash Received <span className="font-urdu">(آج موصول ہونے والا کیش)</span></p>
-            <div className="p-1.5 bg-slate-100 text-slate-700 rounded-md">
-              <Wallet className="h-4 w-4" />
-            </div>
+        <Link href="/cash-receipt" className="bg-white p-5 lg:p-6 rounded-2xl shadow-sm border border-[#E2E8F0] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex justify-between items-center relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#F8FAFC] rounded-bl-[100px] -mr-8 -mt-8 pointer-events-none group-hover:scale-110 transition-transform duration-500"></div>
+          <div className="flex flex-col relative z-10">
+            <h3 className="text-base font-black text-[#334155] mb-2 flex flex-wrap items-center gap-1.5 group-hover:text-[#0F172A] transition-colors">
+              Cash Received <span className="font-urdu text-xs font-normal text-slate-400">(آج موصول)</span>
+            </h3>
+            <div className="text-xl font-bold text-[#0F172A] tracking-tight">850,000 <span className="text-xs font-bold text-slate-400 ml-0.5">RS</span></div>
           </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-bold text-slate-900">850,000 RS</h3>
-            <p className="text-xs font-medium text-slate-500 mt-2 flex items-center gap-1">
-              3 receipts generated <span className="font-urdu">(رسیدیں بنی ہیں)</span>
-            </p>
+          <div className="h-11 w-11 lg:h-12 lg:w-12 bg-[#10B981]/10 text-[#10B981] rounded-full flex items-center justify-center shrink-0 z-10">
+            <Wallet className="h-5 w-5" />
           </div>
         </Link>
 
         {/* Outstanding */}
-        <Link href="/ledger" className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-emerald-500 hover:-translate-y-1 hover:shadow-md transition-all cursor-pointer block">
-          <div className="flex justify-between items-start">
-            <p className="text-xs font-medium text-slate-500 flex gap-1">Outstanding <span className="font-urdu">(بقایا وصولیاں)</span></p>
-            <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-md">
-              <Users className="h-4 w-4" />
-            </div>
+        <Link href="/ledger" className="bg-white p-5 lg:p-6 rounded-2xl shadow-sm border border-[#E2E8F0] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex justify-between items-center relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#F8FAFC] rounded-bl-[100px] -mr-8 -mt-8 pointer-events-none group-hover:scale-110 transition-transform duration-500"></div>
+          <div className="flex flex-col relative z-10">
+            <h3 className="text-base font-black text-[#334155] mb-2 flex flex-wrap items-center gap-1.5 group-hover:text-[#0F172A] transition-colors">
+              Outstanding <span className="font-urdu text-xs font-normal text-slate-400">(بقایا وصولیاں)</span>
+            </h3>
+            <div className="text-xl font-bold text-[#0F172A] tracking-tight">15.4M <span className="text-xs font-bold text-slate-400 ml-0.5">RS</span></div>
           </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-bold text-slate-900">15,400,000 RS</h3>
-            <p className="text-xs font-medium text-emerald-600 mt-2 flex items-center gap-1">
-              <ArrowDownRight className="h-3 w-3" /> Requires follow-up <span className="font-urdu">(فالو اپ درکار ہے)</span>
-            </p>
+          <div className="h-11 w-11 lg:h-12 lg:w-12 bg-[#10B981]/10 text-[#10B981] rounded-full flex items-center justify-center shrink-0 z-10">
+            <Users className="h-5 w-5" />
           </div>
         </Link>
 
         {/* Commission Earned */}
-        <Link href="/summaries" className="bg-[#1b1b3a] p-5 rounded-xl shadow-sm relative overflow-hidden text-white hover:-translate-y-1 hover:shadow-md transition-all cursor-pointer block hover:shadow-[#1b1b3a]/20">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <FileText className="h-20 w-20" />
+        <Link href="/receipts" className="bg-white p-5 lg:p-6 rounded-2xl shadow-sm border border-[#E2E8F0] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex justify-between items-center relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#F8FAFC] rounded-bl-[100px] -mr-8 -mt-8 pointer-events-none group-hover:scale-110 transition-transform duration-500"></div>
+          <div className="flex flex-col relative z-10">
+            <h3 className="text-base font-black text-[#334155] mb-2 flex flex-wrap items-center gap-1.5 group-hover:text-[#0F172A] transition-colors">
+              Commission 8% <span className="font-urdu text-xs font-normal text-slate-400">(کمیشن)</span>
+            </h3>
+            <div className="text-xl font-bold text-[#0F172A] tracking-tight">196,000 <span className="text-xs font-bold text-slate-400 ml-0.5">RS</span></div>
           </div>
-          <div className="relative z-10 flex justify-between items-start">
-            <p className="text-xs font-medium text-white/70 flex gap-1">8% Commission Earned <span className="font-urdu">(8% کمیشن حاصل کیا)</span></p>
-          </div>
-          <div className="relative z-10 mt-3">
-            <h3 className="text-2xl font-bold text-[#7c3aed]">196,000 RS</h3>
-            <p className="text-xs font-medium text-white/50 mt-2 flex items-center gap-1">
-              <Clock className="h-3 w-3" /> Updated just now <span className="font-urdu">(ابھی اپ ڈیٹ ہوا)</span>
-            </p>
+          <div className="h-11 w-11 lg:h-12 lg:w-12 bg-[#10B981]/10 text-[#10B981] rounded-full flex items-center justify-center shrink-0 z-10">
+            <FileText className="h-5 w-5" />
           </div>
         </Link>
 
       </div>
 
-      {/* Main Content Area (Graph + Quick Links) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Area Chart with Filters */}
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h2 className="text-lg font-bold text-slate-800">Sales Overview</h2>
-              <p className="text-xs text-slate-500">Revenue tracking graph</p>
+      {/* Quick Actions Grid (Row 2) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <Link href="/ledger" className="bg-white p-5 rounded-2xl shadow-sm border border-[#E2E8F0] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex items-center justify-between group">
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-10 bg-[#F8FAFC] group-hover:bg-[#10B981]/10 text-[#10B981] transition-colors rounded-xl flex items-center justify-center shrink-0">
+              <BookOpen className="h-4 w-4" />
             </div>
-            {/* Filters */}
-            <div className="flex bg-slate-100 rounded-lg p-1">
-              {(['week', 'month', 'year'] as const).map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setChartFilter(filter)}
-                  className={cn(
-                    "px-4 py-1.5 text-xs font-medium rounded-md transition-all capitalize",
-                    chartFilter === filter ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                  )}
-                >
-                  {filter}
-                </button>
-              ))}
+            <div className="flex flex-col">
+              <span className="text-[15px] font-bold text-[#334155] group-hover:text-[#0F172A] transition-colors">Account Index</span>
+              <span className="text-[11px] font-urdu text-slate-400">(کھاتہ انڈیکس)</span>
             </div>
           </div>
-          <div className="h-72 w-full">
+        </Link>
+
+        <Link href="/item-list" className="bg-white p-5 rounded-2xl shadow-sm border border-[#E2E8F0] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex items-center justify-between group">
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-10 bg-[#F8FAFC] group-hover:bg-[#10B981]/10 text-[#10B981] transition-colors rounded-xl flex items-center justify-center shrink-0">
+              <List className="h-4 w-4" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[15px] font-bold text-[#334155] group-hover:text-[#0F172A] transition-colors">Item List</span>
+              <span className="text-[11px] font-urdu text-slate-400">(فہرست اشیاء)</span>
+            </div>
+          </div>
+        </Link>
+
+        <Link href="/ledger" className="bg-white p-5 rounded-2xl shadow-sm border border-[#E2E8F0] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex items-center justify-between group">
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-10 bg-[#F8FAFC] group-hover:bg-[#10B981]/10 text-[#10B981] transition-colors rounded-xl flex items-center justify-center shrink-0">
+              <FileText className="h-4 w-4" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[15px] font-bold text-[#334155] group-hover:text-[#0F172A] transition-colors">Gen. Balance</span>
+              <span className="text-[11px] font-urdu text-slate-400">(جنرل بیلنس لسٹ)</span>
+            </div>
+          </div>
+        </Link>
+
+        <Link href="/summaries" className="bg-white p-5 rounded-2xl shadow-sm border border-[#E2E8F0] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex items-center justify-between group">
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-10 bg-[#F8FAFC] group-hover:bg-[#10B981]/10 text-[#10B981] transition-colors rounded-xl flex items-center justify-center shrink-0">
+              <TrendingUp className="h-4 w-4" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[15px] font-bold text-[#334155] group-hover:text-[#0F172A] transition-colors">Daily Dispatch</span>
+              <span className="text-[11px] font-urdu text-slate-400">(روزانہ سیل ڈسپیچ)</span>
+            </div>
+          </div>
+        </Link>
+      </div>
+
+      {/* Main Content Area (Graph) */}
+      <div className="w-full bg-white border border-[#E2E8F0] rounded-2xl shadow-sm p-6 mt-2">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
+          <div>
+            <h2 className="text-[16px] font-bold text-[#0F172A] flex items-center gap-2">
+              Financial Activity Trend <span className="font-urdu text-slate-400 font-normal">(مالی سرگرمیوں کا جائزہ)</span>
+            </h2>
+          </div>
+          
+          {/* Functional Date Picker (Styled like a dropdown pill) */}
+          <div className="flex items-center bg-white border border-[#E2E8F0] hover:border-[#10B981]/50 transition-colors rounded-lg px-2 shadow-sm">
+            <div className="flex items-center gap-2 px-2 py-1.5">
+              <input 
+                type="date" 
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="bg-transparent border-none text-[13px] font-semibold text-[#334155] focus:outline-none focus:ring-0 cursor-pointer w-[110px]"
+              />
+            </div>
+            <div className="h-4 w-px bg-slate-200"></div>
+            <div className="flex items-center gap-2 px-2 py-1.5">
+              <input 
+                type="date" 
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="bg-transparent border-none text-[13px] font-semibold text-[#334155] focus:outline-none focus:ring-0 cursor-pointer w-[110px]"
+              />
+            </div>
+          </div>
+        </div>
+        
+        <div className="h-[340px] w-full">
+          {filteredData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={getChartData()} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={filteredData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#7c3aed" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" strokeOpacity={0.6} />
                 <XAxis 
                   dataKey="name" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 12, fill: '#94a3b8' }} 
-                  dy={10}
+                  tick={{ fontSize: 12, fill: '#64748B', fontWeight: 600 }} 
+                  dy={15}
+                  minTickGap={30}
                 />
                 <YAxis 
+                  domain={['auto', 'auto']}
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 12, fill: '#94a3b8' }}
-                  tickFormatter={(val) => `S ${val / 1000}k`}
+                  tick={{ fontSize: 12, fill: '#64748B', fontWeight: 600 }}
+                  dx={-10}
+                  tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val}
                 />
                 <Tooltip 
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  formatter={(value: any) => [`${value.toLocaleString()} RS`, 'Revenue']}
+                  contentStyle={{ 
+                    borderRadius: '8px', 
+                    border: 'none', 
+                    boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+                    fontWeight: 600,
+                    color: '#0F172A',
+                    padding: '8px 16px'
+                  }}
+                  itemStyle={{ color: '#10B981', fontWeight: 700, fontSize: '15px' }}
+                  labelStyle={{ color: '#64748B', marginBottom: '4px', fontSize: '12px' }}
+                  formatter={(value: any) => [`${(value).toLocaleString(undefined, {maximumFractionDigits:0})} RS`, 'Revenue']}
                 />
                 <Area 
                   type="monotone" 
                   dataKey="revenue" 
-                  stroke="#7c3aed" 
+                  stroke="#10B981" 
                   strokeWidth={3}
                   fillOpacity={1} 
                   fill="url(#colorRevenue)" 
+                  activeDot={{ r: 6, strokeWidth: 3, stroke: '#FFFFFF', fill: '#10B981' }}
                 />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Quick Links (Replaced Pie Chart) */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col gap-3">
-          <h2 className="text-lg font-bold text-slate-800 mb-2">Quick Actions (فوری لنکس)</h2>
-          
-          <Link href="/ledger" className="flex items-center justify-between p-3.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors">
-            <span className="font-bold text-sm text-slate-700">Account Index</span>
-            <span className="font-urdu font-medium text-slate-700 text-base">(کھاتہ انڈیکس)</span>
-          </Link>
-          
-          <Link href="/item-list" className="flex items-center justify-between p-3.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors">
-            <span className="font-bold text-sm text-slate-700">Item List</span>
-            <span className="font-urdu font-medium text-slate-700 text-base">(فہرست اشیاء)</span>
-          </Link>
-
-          <Link href="/ledger" className="flex items-center justify-between p-3.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors">
-            <span className="font-bold text-sm text-slate-700">General Balance</span>
-            <span className="font-urdu font-medium text-slate-700 text-base">(جنرل بیلنس لسٹ)</span>
-          </Link>
-
-          <Link href="/summaries" className="flex items-center justify-between p-3.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors">
-            <span className="font-bold text-sm text-slate-700">Daily Sale Dispatch</span>
-            <span className="font-urdu font-medium text-slate-700 text-base">(روزانہ سیل ڈسپیچ)</span>
-          </Link>
-
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
+              <Calendar className="h-8 w-8 mb-2 opacity-30" />
+              <p className="font-semibold text-sm">No data found for this date range.</p>
+            </div>
+          )}
         </div>
       </div>
+
     </div>
   );
 }
