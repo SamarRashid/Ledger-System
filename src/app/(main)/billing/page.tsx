@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Search, Save, Printer, Plus, ChevronDown, ChevronUp, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Save, Printer, Plus, ChevronDown, ChevronUp, X, CheckCircle2, Maximize } from "lucide-react";
 import { cn } from "@/components/layout/Header";
 import { AccountSearchModal, Account } from "@/components/AccountSearchModal";
+import { ItemSearchModal } from "@/components/ItemSearchModal";
 
 type LineItem = {
   id: string;
@@ -15,6 +16,18 @@ type LineItem = {
 };
 
 export default function BillingPage() {
+  const [isFullScreenUI, setIsFullScreenUI] = useState<boolean>(false);
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullScreenUI(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
+  const [showToast, setShowToast] = useState<boolean>(false);
+  const [isItemSearchOpen, setIsItemSearchOpen] = useState<boolean>(false);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Account | null>(null);
   
@@ -27,7 +40,7 @@ export default function BillingPage() {
   const [copyNo, setCopyNo] = useState<string>("");
   const [gaariNo, setGaariNo] = useState<string>("");
   
-  const [item, setItem] = useState<string>("دیسی گندم");
+  const [item, setItem] = useState<string>("");
   const [commissionPct, setCommissionPct] = useState<number | "">(8);
   const [jama, setJama] = useState<number | "">(0);
   const [itemSize, setItemSize] = useState<string>("");
@@ -49,8 +62,8 @@ export default function BillingPage() {
   const totalAmount: number = lineItems.reduce((sum, li) => sum + li.amount, 0);
   const totalCommission: number = totalAmount * ((Number(commissionPct) || 0) / 100); 
   
-  const totalDeductions: number = (Number(freight) || 0) + (Number(labor) || 0) + (Number(otherCharges) || 0);
-  const netTotal: number = totalAmount - totalCommission - totalDeductions;
+  const totalDeductions: number = Math.max(0, (Number(freight) || 0) + (Number(labor) || 0) + (Number(otherCharges) || 0));
+  const netTotal: number = Math.max(0, totalAmount - totalCommission - totalDeductions);
 
   const handleAddLineItem = () => {
     if (!item || !weight || !rate) return;
@@ -73,12 +86,31 @@ export default function BillingPage() {
     setBags("");
   };
 
+  const resetForm = () => {
+    setSelectedCustomer(null);
+    setSelectedBeopari(null);
+    setCopyNo("");
+    setGaariNo("");
+    setItem("");
+    setCommissionPct(8);
+    setJama(0);
+    setItemSize("");
+    setBags(12);
+    setWeight(150);
+    setRate(21);
+    setFreight(0);
+    setLabor(70);
+    setOtherCharges(0);
+    setLineItems([]);
+    setBillNo(prev => (parseInt(prev) ? parseInt(prev) + 1 : 1001).toString());
+  };
+
   const handleSave = () => {
     if (!selectedCustomer || lineItems.length === 0) {
       alert("Please select a customer and add at least one item.");
       return;
     }
-    alert("Invoice saved successfully!");
+    setShowToast(true);
   };
 
   const handlePrint = () => {
@@ -98,12 +130,12 @@ export default function BillingPage() {
         
         <div className="grid grid-cols-2 gap-4 mb-6 font-bold text-lg">
           <div>
-            <p className="mb-2"><strong>خریدار: </strong> {selectedCustomer ? selectedCustomer.nameUrdu : "__________________"}</p>
+            <p className="mb-2"><strong>خریدار: </strong> {selectedCustomer ? `${selectedCustomer.code} - ${selectedCustomer.nameUrdu}` : "__________________"}</p>
             <p className="mb-2"><strong>تاریخ: </strong> {date}</p>
           </div>
           <div>
             <p className="mb-2"><strong>بل نمبر: </strong> {billNo}</p>
-            <p className="mb-2"><strong>بیوپاری: </strong> {selectedBeopari ? selectedBeopari.nameUrdu : "__________________"}</p>
+            <p className="mb-2"><strong>بیوپاری: </strong> {selectedBeopari ? `${selectedBeopari.code} - ${selectedBeopari.nameUrdu}` : "__________________"}</p>
           </div>
         </div>
 
@@ -157,27 +189,29 @@ export default function BillingPage() {
     </div>
 
     {/* NORMAL APP VIEW */}
-    <div className="print:hidden flex flex-col h-[calc(100vh-6rem)] bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
+    <div className={cn(
+      "print:hidden flex flex-col bg-[#F8FAFC] shadow-sm transition-all duration-300 overflow-hidden",
+      isFullScreenUI 
+        ? "fixed inset-0 z-[100] h-[100dvh] w-screen p-2 sm:p-4 rounded-none" 
+        : "h-[calc(100vh-8.5rem)] rounded-xl border border-[#E2E8F0]"
+    )}>
       
       {/* Main Content Split - NO TITLE BAR ANYMORE! */}
-      <div className="flex flex-col md:flex-row flex-1 p-3 gap-3 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="flex flex-col-reverse lg:flex-row flex-1 p-2 sm:p-3 gap-3 overflow-y-auto lg:overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         
         {/* Left Pane - Line Items & Totals */}
-        <div className="w-full md:flex-1 flex flex-col gap-3 min-w-[50%]">
+        <div className="w-full lg:flex-1 flex flex-col gap-3 min-w-0 lg:h-full">
           {/* Line Items Table */}
-          <div className="flex-1 bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden flex flex-col">
-            <div className="bg-[#1e293b] text-white p-2 font-bold text-center text-xs tracking-wide" dir="rtl">
+          <div className="flex-1 bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden flex flex-col min-h-[300px]">
+            <div className="bg-[#064789] text-white p-2 font-bold text-center text-xs tracking-wide" dir="rtl">
               بیوپاری سادہ بل بغیر آمد
             </div>
-            <div className="overflow-x-auto flex-1">
-              <table className="w-full text-xs text-right" dir="rtl">
+            <div className="overflow-x-auto overflow-y-auto flex-1 pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              <table className="w-full text-xs text-right min-w-[600px]" dir="rtl">
                 <thead className="bg-[#F8FAFC] sticky top-0 border-b border-[#E2E8F0]">
                   <tr>
                     <th className="p-2 border-l border-[#E2E8F0] text-center text-[11px] font-bold text-[#334155] leading-tight">
                       Item<br/><span className="font-urdu font-normal text-[10px] opacity-80">اشیاء قسم</span>
-                    </th>
-                    <th className="p-2 border-l border-[#E2E8F0] text-center text-[11px] font-bold text-[#334155] leading-tight">
-                      Marka<br/><span className="font-urdu font-normal text-[10px] opacity-80">مارکہ</span>
                     </th>
                     <th className="p-2 border-l border-[#E2E8F0] text-center text-[11px] font-bold text-[#334155] leading-tight">
                       Customer<br/><span className="font-urdu font-normal text-[10px] opacity-80">نام خریدار</span>
@@ -191,9 +225,6 @@ export default function BillingPage() {
                     <th className="p-2 border-l border-[#E2E8F0] text-center text-[11px] font-bold text-[#334155] leading-tight">
                       Rate/Kg<br/><span className="font-urdu font-normal text-[10px] opacity-80">ریٹ فی کلو</span>
                     </th>
-                    <th className="p-2 border-l border-[#E2E8F0] text-center text-[11px] font-bold text-[#334155] leading-tight">
-                      Jama<br/><span className="font-urdu font-normal text-[10px] opacity-80">کمی بیشی/جمع</span>
-                    </th>
                     <th className="p-2 text-center text-[11px] font-bold text-[#334155] leading-tight">
                       Total<br/><span className="font-urdu font-normal text-[10px] opacity-80">کل رقم</span>
                     </th>
@@ -203,18 +234,16 @@ export default function BillingPage() {
                   {lineItems.map((li, idx) => (
                     <tr key={li.id} className="hover:bg-cyan-50/50 transition-colors">
                       <td className="p-2 border-l border-[#E2E8F0] font-urdu text-center text-[#334155]">{li.item}</td>
-                      <td className="p-2 border-l border-[#E2E8F0] text-center font-urdu text-[#334155]">{selectedCustomer ? selectedCustomer.marka : "-"}</td>
-                      <td className="p-2 border-l border-[#E2E8F0] text-center font-urdu text-[#334155]">{selectedCustomer ? selectedCustomer.nameUrdu : "-"}</td>
+                      <td className="p-2 border-l border-[#E2E8F0] text-center font-urdu text-[#334155]">{selectedCustomer ? `${selectedCustomer.code} - ${selectedCustomer.nameUrdu}` : "-"}</td>
                       <td className="p-2 border-l border-[#E2E8F0] font-bold text-center text-[#0F172A]">{li.weight}</td>
                       <td className="p-2 border-l border-[#E2E8F0] text-center font-urdu text-[#334155]">{commissionPct}%</td>
                       <td className="p-2 border-l border-[#E2E8F0] text-[#06b6d4] font-bold text-center">{li.rate}</td>
-                      <td className="p-2 border-l border-[#E2E8F0] text-center font-bold text-[#0F172A]">0</td>
                       <td className="p-2 font-bold text-[#0F172A] text-center">{li.amount.toLocaleString()}</td>
                     </tr>
                   ))}
                   {lineItems.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-slate-400 font-urdu text-sm">کوئی ریکارڈ نہیں</td>
+                      <td colSpan={6} className="p-8 text-center text-slate-400 font-urdu text-sm">کوئی ریکارڈ نہیں</td>
                     </tr>
                   )}
                 </tbody>
@@ -261,38 +290,56 @@ export default function BillingPage() {
               <label className="font-bold text-[#0F172A] text-xs shrink-0 whitespace-nowrap">بل نوٹ (Note):</label>
               <input type="text" placeholder="کوئی نوٹ لکھیں..." className="flex-1 border border-[#E2E8F0] p-1.5 bg-[#F8FAFC] text-xs font-urdu focus:outline-none focus:border-[#06b6d4] rounded-md transition-colors" />
             </div>
+
+            {/* Action Buttons - Moved to Left Pane */}
+            <div className="flex gap-3 pt-4 shrink-0 items-center">
+              <button onClick={handleSave} className="flex-1 bg-[#06b6d4] text-white py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-cyan-600 transition-colors shadow-sm">
+                <Save className="h-4 w-4" /> Save (محفوظ)
+              </button>
+              <button onClick={handlePrint} className="flex-1 bg-[#064789] text-white py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#053a70] transition-colors shadow-sm">
+                <Printer className="h-4 w-4" /> Print (پرنٹ)
+              </button>
+              <button onClick={() => {
+                if (!document.fullscreenElement) {
+                  document.documentElement.requestFullscreen().catch(e => console.error(e));
+                } else {
+                  document.exitFullscreen().catch(e => console.error(e));
+                }
+              }} className="w-10 h-10 shrink-0 bg-slate-600 text-white rounded-full flex items-center justify-center hover:bg-slate-700 transition-colors shadow-sm" title="Full Screen">
+                <Maximize className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Right Pane - EXACT MATCH TO SCREENSHOT 1 */}
-        <div className="w-full md:w-[45%] flex flex-col gap-3 shrink-0">
+        <div className="w-full lg:w-[45%] xl:w-[40%] flex flex-col gap-1.5 shrink-0 lg:h-full overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-1">
           
-          <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm flex flex-col p-3 gap-3 text-xs" dir="rtl">
+          <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm flex flex-col p-2 gap-1.5 text-xs" dir="rtl">
             
             {/* Row 1: Date */}
-            <div className="flex justify-between items-center bg-[#06b6d4]/10 p-1.5 rounded border border-[#06b6d4]/20">
+            <div className="flex justify-between items-center bg-[#06b6d4]/10 p-1 rounded border border-[#06b6d4]/20 gap-2">
               <div className="flex items-center gap-2 w-1/2">
                 <label className="font-bold text-[#0F172A] whitespace-nowrap">Date (تاریخ)</label>
-                <input type="date" value={date} onChange={e => setDate(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-1 text-center bg-white focus:border-[#06b6d4] outline-none flex-1" />
+                <input type="date" value={date} onChange={e => setDate(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-0.5 text-center bg-white focus:border-[#06b6d4] outline-none flex-1 min-w-0 w-full" />
               </div>
-              <div className="w-1/2 flex items-center gap-2 pl-2">
+              <div className="w-1/2 flex items-center gap-2">
                 <label className="font-bold text-[#0F172A] text-left whitespace-nowrap">Bill No (بل نمبر)</label>
-                <input type="text" value={billNo} onChange={e => setBillNo(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-1 text-center bg-white outline-none flex-1" />
+                <input type="text" value={billNo} onChange={e => setBillNo(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-0.5 text-center bg-white outline-none flex-1 min-w-0 w-full" />
               </div>
             </div>
 
             {/* Row 2: Beopari */}
-            <div className="flex items-center gap-2 bg-cyan-100/50 p-1.5 rounded border border-cyan-200">
-              <label className="font-bold text-[#0F172A] whitespace-nowrap">Beopari (بیوپاری)</label>
+            <div className="flex items-center gap-2 bg-cyan-100/50 p-1 rounded border border-cyan-200">
+              <label className="font-bold text-[#0F172A] whitespace-nowrap min-w-[90px]">Beopari (بیوپاری)</label>
               <div className="flex relative flex-1">
-                <input 
-                  type="text" 
-                  value={selectedBeopari ? `${selectedBeopari.code} - ${selectedBeopari.nameUrdu}` : ""} 
-                  readOnly 
-                  placeholder="بیوپاری منتخب کریں"
-                  className="border border-[#E2E8F0] rounded-sm p-1 w-full bg-white font-urdu font-bold focus:outline-none cursor-pointer text-[#0F172A]"
+                <div 
+                  className="border border-[#E2E8F0] rounded-sm p-0.5 min-h-[26px] w-full bg-white font-urdu font-bold cursor-pointer text-[#0F172A] flex items-center whitespace-normal break-words pl-8"
                   onClick={() => setIsBeopariSearchOpen(true)}
-                />
+                  dir="rtl"
+                >
+                  {selectedBeopari ? `${selectedBeopari.code} - ${selectedBeopari.nameUrdu}` : <span className="text-gray-400 font-normal text-xs">بیوپاری منتخب کریں</span>}
+                </div>
                 <button onClick={() => setIsBeopariSearchOpen(true)} className="absolute left-0 top-0 bottom-0 bg-slate-100 rounded-l-sm px-2 border border-[#E2E8F0] hover:bg-slate-200">
                   <Search className="w-3 h-3 text-[#334155]" />
                 </button>
@@ -300,37 +347,36 @@ export default function BillingPage() {
             </div>
 
             {/* Row 3: Copy No / Gaari No */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col gap-0.5">
                 <label className="font-bold text-[#0F172A] whitespace-nowrap">Copy No (کاپی)</label>
-                <input type="text" value={copyNo} onChange={e => setCopyNo(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-1 bg-white outline-none flex-1" />
+                <input type="text" value={copyNo} onChange={e => setCopyNo(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full" />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-0.5">
                 <label className="font-bold text-[#0F172A] whitespace-nowrap">Vehicle (گاڑی نمبر)</label>
-                <input type="text" value={gaariNo} onChange={e => setGaariNo(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-1 bg-white outline-none flex-1" />
+                <input type="text" value={gaariNo} onChange={e => setGaariNo(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full" />
               </div>
             </div>
 
             {/* Row 4: Beopari Balance */}
             <div className="flex items-center gap-2">
-              <label className="font-bold text-[#0F172A] whitespace-nowrap">Beopari Bal (بیوپاری بیلنس)</label>
-              <input type="text" value={selectedBeopari ? "50,000" : ""} readOnly className="border border-[#E2E8F0] rounded-sm p-1 bg-cyan-50 text-left font-bold text-cyan-600 outline-none flex-1" />
+              <label className="font-bold text-[#0F172A] whitespace-nowrap min-w-[90px]">Beopari Bal (بیوپاری بیلنس)</label>
+              <input type="text" value={selectedBeopari ? "50,000" : ""} readOnly className="border border-[#E2E8F0] rounded-sm p-0.5 bg-cyan-50 text-left font-bold text-cyan-600 outline-none flex-1" />
             </div>
 
-            <hr className="border-[#E2E8F0] my-0.5" />
+            <hr className="border-[#E2E8F0] my-0" />
 
             {/* Row 5: Kharidar */}
-            <div className="flex items-center gap-2 bg-cyan-100/50 p-1.5 rounded border border-cyan-200">
-              <label className="font-bold text-[#0F172A] whitespace-nowrap">Customer (خریدار)</label>
+            <div className="flex items-center gap-2 bg-cyan-100/50 p-1 rounded border border-cyan-200">
+              <label className="font-bold text-[#0F172A] whitespace-nowrap min-w-[90px]">Customer (خریدار)</label>
               <div className="flex relative flex-1">
-                <input 
-                  type="text" 
-                  value={selectedCustomer ? `${selectedCustomer.code} - ${selectedCustomer.nameUrdu}` : ""} 
-                  readOnly 
-                  placeholder="خریدار منتخب کریں"
-                  className="border border-[#E2E8F0] rounded-sm p-1 w-full bg-white font-urdu font-bold focus:outline-none cursor-pointer text-[#0F172A]"
+                <div 
+                  className="border border-[#E2E8F0] rounded-sm p-0.5 min-h-[26px] w-full bg-white font-urdu font-bold cursor-pointer text-[#0F172A] flex items-center whitespace-normal break-words pl-8"
                   onClick={() => setIsSearchOpen(true)}
-                />
+                  dir="rtl"
+                >
+                  {selectedCustomer ? `${selectedCustomer.code} - ${selectedCustomer.nameUrdu}` : <span className="text-gray-400 font-normal text-xs">خریدار منتخب کریں</span>}
+                </div>
                 <button onClick={() => setIsSearchOpen(true)} className="absolute left-0 top-0 bottom-0 bg-slate-100 rounded-l-sm px-2 border border-[#E2E8F0] hover:bg-slate-200">
                   <Search className="w-3 h-3 text-[#334155]" />
                 </button>
@@ -339,59 +385,66 @@ export default function BillingPage() {
 
             {/* Row 6: Kharidar Balance */}
             <div className="flex items-center gap-2">
-              <label className="font-bold text-[#0F172A] whitespace-nowrap">Customer Bal (خریدار بیلنس)</label>
-              <input type="text" value={selectedCustomer ? "150,000" : ""} readOnly className="border border-[#E2E8F0] rounded-sm p-1 bg-cyan-50 text-left font-bold text-cyan-600 outline-none flex-1" />
+              <label className="font-bold text-[#0F172A] whitespace-nowrap min-w-[90px]">Customer Bal (خریدار بیلنس)</label>
+              <input type="text" value={selectedCustomer ? "150,000" : ""} readOnly className="border border-[#E2E8F0] rounded-sm p-0.5 bg-cyan-50 text-left font-bold text-cyan-600 outline-none flex-1" />
             </div>
 
-            <hr className="border-[#E2E8F0] my-0.5" />
+            <hr className="border-[#E2E8F0] my-0" />
 
             {/* Row 7: Item Entry pt1 */}
-            <div className="grid grid-cols-12 gap-2 bg-cyan-100/30 p-2 rounded border border-cyan-200">
-              <div className="col-span-5 flex flex-col gap-1">
+            <div className="grid grid-cols-12 gap-2 bg-cyan-100/30 p-1.5 rounded border border-cyan-200">
+              <div className="col-span-8 flex flex-col gap-0.5">
                 <label className="font-bold text-[#0F172A] whitespace-nowrap">Item (اشیاء)</label>
-                <input type="text" value={item} onChange={e => setItem(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-1 bg-white outline-none w-full" />
+                <div className="flex relative w-full">
+                  <div 
+                    className="border border-[#E2E8F0] rounded-sm p-0.5 min-h-[26px] w-full bg-white font-urdu font-bold cursor-pointer text-[#0F172A] flex items-center whitespace-normal break-words pl-8"
+                    onClick={() => setIsItemSearchOpen(true)}
+                    dir="rtl"
+                  >
+                    {item ? item : <span className="text-gray-400 font-normal text-xs">Item Name</span>}
+                  </div>
+                  <button onClick={() => setIsItemSearchOpen(true)} className="absolute left-0 top-0 bottom-0 bg-slate-100 rounded-l-sm px-2 border border-[#E2E8F0] hover:bg-slate-200">
+                    <Search className="w-3 h-3 text-[#334155]" />
+                  </button>
+                </div>
               </div>
-              <div className="col-span-3 flex flex-col gap-1">
+              <div className="col-span-4 flex flex-col gap-0.5">
                 <label className="font-bold text-[#0F172A] whitespace-nowrap">Comm (کمیشن)</label>
-                <input type="number" value={commissionPct} onChange={e => setCommissionPct(Number(e.target.value))} className="border border-[#E2E8F0] rounded-sm p-1 bg-white outline-none w-full text-center" />
-              </div>
-              <div className="col-span-4 flex flex-col gap-1">
-                <label className="font-bold text-[#0F172A] whitespace-nowrap">Jama (جمع)</label>
-                <input type="number" value={jama} onChange={e => setJama(Number(e.target.value))} className="border border-[#E2E8F0] rounded-sm p-1 bg-white outline-none w-full text-center" />
+                <input type="number" value={commissionPct} onChange={e => setCommissionPct(Number(e.target.value))} className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full text-center min-h-[26px]" />
               </div>
             </div>
 
             {/* Row 8: Item Entry pt2 */}
             <div className="grid grid-cols-12 gap-2">
-              <div className="col-span-6 flex flex-col gap-1">
+              <div className="col-span-6 flex flex-col gap-0.5">
                 <label className="font-bold text-[#0F172A] whitespace-nowrap">Item Size (اشیاء سائز کلو)</label>
-                <input type="text" value={itemSize} onChange={e => setItemSize(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-1 bg-white outline-none w-full" />
+                <input type="text" value={itemSize} onChange={e => setItemSize(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full min-h-[26px]" />
               </div>
-              <div className="col-span-6 flex flex-col gap-1">
+              <div className="col-span-6 flex flex-col gap-0.5">
                 <label className="font-bold text-[#0F172A] whitespace-nowrap">Packing (پیکنگ)</label>
-                <input type="number" value={bags} onChange={e => setBags(Number(e.target.value))} className="border border-[#E2E8F0] rounded-sm p-1 bg-white outline-none w-full text-center" />
+                <input type="number" value={bags} onChange={e => setBags(Number(e.target.value))} className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full text-center min-h-[26px]" />
               </div>
             </div>
 
             {/* Row 9: Item Entry pt3 (Weight, Rate, Total) */}
-            <div className="grid grid-cols-12 gap-2 bg-[#06b6d4]/10 p-2 rounded border border-[#06b6d4]/20 items-end">
-              <div className="col-span-4 flex flex-col gap-1">
+            <div className="grid grid-cols-12 gap-2 bg-[#06b6d4]/10 p-1.5 rounded border border-[#06b6d4]/20 items-end">
+              <div className="col-span-4 flex flex-col gap-0.5">
                 <label className="font-bold text-[#0F172A] text-center whitespace-nowrap">Weight Kg (وزن کلو)</label>
-                <input type="number" value={weight} onChange={e => setWeight(Number(e.target.value))} className="border border-[#E2E8F0] rounded-sm p-1 bg-white outline-none w-full text-center font-bold" />
+                <input type="number" value={weight} onChange={e => setWeight(Number(e.target.value))} className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full text-center font-bold min-h-[26px]" />
               </div>
-              <div className="col-span-4 flex flex-col gap-1">
+              <div className="col-span-4 flex flex-col gap-0.5">
                 <label className="font-bold text-[#0F172A] text-center whitespace-nowrap">Rate/Kg (ریٹ)</label>
-                <input type="number" value={rate} onChange={e => setRate(Number(e.target.value))} className="border border-[#E2E8F0] rounded-sm p-1 bg-white outline-none w-full text-center font-bold text-red-500" />
+                <input type="number" value={rate} onChange={e => setRate(Number(e.target.value))} className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full text-center font-bold text-red-500 min-h-[26px]" />
               </div>
-              <div className="col-span-4 flex flex-col gap-1">
+              <div className="col-span-4 flex flex-col gap-0.5">
                 <label className="font-bold text-[#0F172A] text-center whitespace-nowrap">Total (ٹوٹل)</label>
-                <div className="border border-[#E2E8F0] rounded-sm p-1 bg-white text-center font-bold text-black h-[26px] flex items-center justify-center">
+                <div className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white text-center font-bold text-black min-h-[26px] flex items-center justify-center">
                    {((Number(weight)||0) * (Number(rate)||0)).toLocaleString()}
                 </div>
               </div>
             </div>
 
-            <button onClick={handleAddLineItem} className="bg-[#06b6d4] text-white p-2 rounded-md hover:bg-cyan-600 font-bold flex items-center justify-center w-full transition-colors h-[34px] shadow-sm mt-1" title="شامل کریں">
+            <button onClick={handleAddLineItem} className="bg-[#06b6d4] text-white p-1.5 rounded-md hover:bg-cyan-600 font-bold flex items-center justify-center w-full transition-colors h-[30px] shadow-sm mt-0.5" title="شامل کریں">
               <Plus className="w-4 h-4 mr-1" /> اشیاء شامل کریں
             </button>
           </div>
@@ -401,7 +454,7 @@ export default function BillingPage() {
           <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm flex flex-col overflow-hidden text-xs shrink-0" dir="rtl">
             <button 
               onClick={() => setIsDeductionsOpen(true)}
-              className="bg-[#1e293b] text-white p-3 font-bold flex items-center justify-between hover:bg-slate-800 transition-colors"
+              className="bg-[#064789] text-white p-2.5 font-bold flex items-center justify-between hover:bg-[#053a70] transition-colors"
             >
               <span className="text-[13px]">مزید بل خرچہ (Deductions)</span>
               <div className="bg-[#06b6d4] rounded-full p-1 shadow-sm">
@@ -437,18 +490,30 @@ export default function BillingPage() {
             )}
           </div>
 
-          {/* Action Buttons - Moved to Bottom */}
-          <div className="flex gap-3 pt-2 shrink-0">
-            <button onClick={handleSave} className="flex-1 bg-[#06b6d4] text-white py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-cyan-600 transition-colors shadow-sm">
-              <Save className="h-4 w-4" /> Save (محفوظ)
-            </button>
-            <button onClick={handlePrint} className="flex-1 bg-[#1e293b] text-white py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-sm">
-              <Printer className="h-4 w-4" /> Print (پرنٹ)
-            </button>
-          </div>
-
         </div>
       </div>
+
+      {/* Save Success Modal */}
+      {showToast && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 flex flex-col items-center text-center animate-in zoom-in-95">
+            <div className="w-24 h-24 bg-cyan-50 rounded-full flex items-center justify-center mb-6">
+              <Save className="w-12 h-12 text-[#06b6d4]" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-800 mb-4">Invoice Saved Successfully!</h2>
+            <p className="text-3xl font-urdu text-slate-800 mb-8" dir="rtl">انوائس کامیابی سے محفوظ ہو گیا ہے۔</p>
+            <button 
+              onClick={() => {
+                setShowToast(false);
+                resetForm();
+              }} 
+              className="w-full bg-[#06b6d4] text-white py-3.5 rounded-xl font-bold text-lg hover:bg-cyan-600 transition-colors"
+            >
+              ٹھیک ہے / OK
+            </button>
+          </div>
+        </div>
+      )}
 
       <AccountSearchModal 
         isOpen={isSearchOpen} 
@@ -462,6 +527,13 @@ export default function BillingPage() {
         onClose={() => setIsBeopariSearchOpen(false)} 
         onSelect={(acc) => {
           setSelectedBeopari(acc);
+        }}
+      />
+      <ItemSearchModal 
+        isOpen={isItemSearchOpen} 
+        onClose={() => setIsItemSearchOpen(false)} 
+        onSelect={(itm) => {
+          setItem(itm.nameUrdu);
         }}
       />
 
@@ -478,15 +550,15 @@ export default function BillingPage() {
             <div className="p-4 space-y-3">
                 <div className="flex items-center justify-between bg-[#F8FAFC] p-2 rounded-md border border-[#E2E8F0]/50">
                   <span className="font-urdu text-[#0F172A] font-medium">Freight (کرایہ)</span>
-                  <input type="number" value={freight} onChange={e => setFreight(Number(e.target.value))} className="w-24 p-1 rounded border border-[#E2E8F0] text-center focus:border-[#06b6d4] outline-none" />
+                  <input type="number" min="0" value={freight} onChange={e => setFreight(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))} onKeyDown={e => e.key === '-' && e.preventDefault()} className="w-24 p-1 rounded border border-[#E2E8F0] text-center focus:border-[#06b6d4] outline-none" />
                 </div>
                 <div className="flex items-center justify-between bg-[#F8FAFC] p-2 rounded-md border border-[#E2E8F0]/50">
                   <span className="font-urdu text-[#0F172A] font-medium">Labor (مزدوری)</span>
-                  <input type="number" value={labor} onChange={e => setLabor(Number(e.target.value))} className="w-24 p-1 rounded border border-[#E2E8F0] text-center focus:border-[#06b6d4] outline-none text-red-500 font-medium" />
+                  <input type="number" min="0" value={labor} onChange={e => setLabor(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))} onKeyDown={e => e.key === '-' && e.preventDefault()} className="w-24 p-1 rounded border border-[#E2E8F0] text-center focus:border-[#06b6d4] outline-none text-red-500 font-medium" />
                 </div>
                 <div className="flex items-center justify-between bg-[#F8FAFC] p-2 rounded-md border border-[#E2E8F0]/50">
                   <span className="font-urdu text-[#0F172A] font-medium">Other (متفرق)</span>
-                  <input type="number" value={otherCharges} onChange={e => setOtherCharges(Number(e.target.value))} className="w-24 p-1 rounded border border-[#E2E8F0] text-center focus:border-[#06b6d4] outline-none" />
+                  <input type="number" min="0" value={otherCharges} onChange={e => setOtherCharges(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))} onKeyDown={e => e.key === '-' && e.preventDefault()} className="w-24 p-1 rounded border border-[#E2E8F0] text-center focus:border-[#06b6d4] outline-none" />
                 </div>
             </div>
             <div className="p-3 border-t border-[#E2E8F0] bg-slate-50 flex justify-end">
@@ -497,6 +569,8 @@ export default function BillingPage() {
           </div>
         </div>
       )}
+
+
     </div>
     </>
   );
