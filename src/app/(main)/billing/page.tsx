@@ -88,7 +88,6 @@ export default function BillingPage() {
 
   const resetForm = () => {
     setSelectedCustomer(null);
-    setSelectedBeopari(null);
     setCopyNo("");
     setGaariNo("");
     setItem("");
