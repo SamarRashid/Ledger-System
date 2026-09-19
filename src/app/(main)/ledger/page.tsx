@@ -72,6 +72,15 @@ export default function LedgerPage() {
     Number(MOCK_ACCOUNTS[0]?.id)
   );
 
+  // Only for Account search dropdown
+  const [accountSearch, setAccountSearch] = useState<string>(
+    MOCK_ACCOUNTS[0]
+      ? `${MOCK_ACCOUNTS[0].nameUrdu} (${MOCK_ACCOUNTS[0].code}) - ${MOCK_ACCOUNTS[0].nameEnglish}`
+      : ""
+  );
+  const [showAccountDropdown, setShowAccountDropdown] =
+    useState<boolean>(false);
+
   const [printedDate, setPrintedDate] = useState<string>("");
 
   useEffect(() => {
@@ -97,6 +106,29 @@ export default function LedgerPage() {
   const customer = MOCK_ACCOUNTS.find(
     (account) => Number(account.id) === selectedCustomer
   );
+
+  // Search account by Urdu name, English name, or code
+  const filteredAccounts = MOCK_ACCOUNTS.filter((account) => {
+    const search = accountSearch.toLowerCase().trim();
+
+    if (!search) return true;
+
+    return (
+      String(account.code).toLowerCase().includes(search) ||
+      String(account.nameEnglish).toLowerCase().includes(search) ||
+      String(account.nameUrdu).toLowerCase().includes(search)
+    );
+  });
+
+  const handleAccountSelect = (account: (typeof MOCK_ACCOUNTS)[number]) => {
+    setSelectedCustomer(Number(account.id));
+
+    setAccountSearch(
+      `${account.nameUrdu} (${account.code}) - ${account.nameEnglish}`
+    );
+
+    setShowAccountDropdown(false);
+  };
 
   return (
     <div className="max-w-6xl mx-auto flex flex-col min-h-full pb-24">
@@ -174,28 +206,55 @@ export default function LedgerPage() {
             </label>
 
             <div className="relative">
-
-              <select
-                value={selectedCustomer}
-                onChange={(e) =>
-                  setSelectedCustomer(Number(e.target.value))
-                }
-                className="w-full pl-3 pr-10 py-2.5 border border-[#E2E8F0] rounded-lg focus:outline-none focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4] appearance-none bg-[#F8FAFC] font-urdu text-[#0F172A] text-sm cursor-pointer"
+              <input
+                type="text"
+                value={accountSearch}
+                onChange={(e) => {
+                  setAccountSearch(e.target.value);
+                  setShowAccountDropdown(true);
+                }}
+                onFocus={() => setShowAccountDropdown(true)}
+                placeholder="Search account name or code..."
+                className="w-full pl-10 pr-3 py-2.5 border border-[#E2E8F0] rounded-lg focus:outline-none focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4] bg-[#F8FAFC] font-urdu text-[#0F172A] text-sm"
                 dir="rtl"
-              >
-                {MOCK_ACCOUNTS.map((account) => (
-                  <option
-                    key={account.id}
-                    value={account.id}
-                  >
-                    {account.nameUrdu} ({account.code}) -{" "}
-                    {account.nameEnglish}
-                  </option>
-                ))}
-              </select>
+              />
 
               <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400 pointer-events-none" />
 
+              {showAccountDropdown && (
+                <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-[#E2E8F0] rounded-lg shadow-lg max-h-60 overflow-y-auto">
+
+                  {filteredAccounts.length > 0 ? (
+                    filteredAccounts.map((account) => (
+                      <button
+                        key={account.id}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleAccountSelect(account);
+                        }}
+                        className="w-full text-start px-3 py-2.5 hover:bg-[#F1F5F9] border-b border-slate-100 last:border-b-0 transition-colors"
+                      >
+                        <div
+                          className="font-urdu text-sm font-bold text-[#0F172A]"
+                          dir="rtl"
+                        >
+                          {account.nameUrdu}
+                        </div>
+
+                        <div className="text-xs text-slate-500 mt-0.5">
+                          {account.nameEnglish} ({account.code})
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-3 py-3 text-sm text-slate-500 text-center">
+                      No account found
+                    </div>
+                  )}
+
+                </div>
+              )}
             </div>
           </div>
 
@@ -348,6 +407,7 @@ export default function LedgerPage() {
 
               </tr>
             </thead>
+
             <tbody className="divide-y divide-[#E2E8F0]">
 
               {transactionsWithBalance.map((tx) => (
@@ -364,7 +424,8 @@ export default function LedgerPage() {
                     {tx.billNo || "-"}
                   </td>
 
-                  <td className="py-3 px-4 font-bold text-[#0F172A] text-start text-xs font-urdu">
+                  {/* Description - text will wrap to next line */}
+                  <td className="py-3 px-4 font-bold text-[#0F172A] text-start text-xs font-urdu whitespace-normal break-words min-w-[250px] max-w-[500px]">
                     {tx.description}
                   </td>
 
@@ -431,6 +492,7 @@ export default function LedgerPage() {
 
       {/* BOTTOM ACTION BAR */}
       <div className="-mx-4 sm:-mx-6 lg:-mx-8 bg-white border-t border-slate-200 p-4 z-30 flex justify-end gap-3 px-6 print:hidden mt-8 rounded-b-xl shadow-sm">
+
         <button
           type="button"
           onClick={handlePrint}
@@ -448,6 +510,7 @@ export default function LedgerPage() {
           <Printer className="h-4 w-4" />
           Print (پرنٹ)
         </button>
+
       </div>
 
     </div>
