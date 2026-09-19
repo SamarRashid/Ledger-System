@@ -13,6 +13,8 @@ type LineItem = {
   weight: number;
   rate: number;
   amount: number;
+  customer: Account | null;
+  commissionPct: number | "";
 };
 
 export default function BillingPage() {
@@ -60,7 +62,7 @@ export default function BillingPage() {
   // Derived Values
   const totalWeight: number = lineItems.reduce((sum, li) => sum + li.weight, 0);
   const totalAmount: number = lineItems.reduce((sum, li) => sum + li.amount, 0);
-  const totalCommission: number = totalAmount * ((Number(commissionPct) || 0) / 100); 
+  const totalCommission: number = lineItems.reduce((sum, li) => sum + (li.amount * ((Number(li.commissionPct) || 0) / 100)), 0); 
   
   const totalDeductions: number = Math.max(0, (Number(freight) || 0) + (Number(labor) || 0) + (Number(otherCharges) || 0));
   const netTotal: number = Math.max(0, totalAmount - totalCommission - totalDeductions);
@@ -77,17 +79,26 @@ export default function BillingPage() {
       bags: b,
       weight: w,
       rate: r,
-      amount: w * r
+      amount: w * r,
+      customer: selectedCustomer,
+      commissionPct: commissionPct
     }]);
 
-    // Reset inputs
+    // Reset inputs except Beopari
+    setSelectedCustomer(null);
+    setCopyNo("");
+    setGaariNo("");
+    setItem("");
+    setCommissionPct("");
+    setItemSize("");
+    setBags("");
     setWeight("");
     setRate("");
-    setBags("");
   };
 
   const resetForm = () => {
     setSelectedCustomer(null);
+    setSelectedBeopari(null);
     setCopyNo("");
     setGaariNo("");
     setItem("");
@@ -105,8 +116,8 @@ export default function BillingPage() {
   };
 
   const handleSave = () => {
-    if (!selectedCustomer || lineItems.length === 0) {
-      alert("Please select a customer and add at least one item.");
+    if (!selectedBeopari || lineItems.length === 0) {
+      alert("Please select a beopari and add at least one item.");
       return;
     }
     setShowToast(true);
@@ -129,7 +140,7 @@ export default function BillingPage() {
         
         <div className="grid grid-cols-2 gap-4 mb-6 font-bold text-lg">
           <div>
-            <p className="mb-2"><strong>خریدار: </strong> {selectedCustomer ? `${selectedCustomer.code} - ${selectedCustomer.nameUrdu}` : "__________________"}</p>
+            <p className="mb-2"><strong>خریدار: </strong> {lineItems[0]?.customer ? `${lineItems[0].customer.code} - ${lineItems[0].customer.nameUrdu}` : "__________________"}</p>
             <p className="mb-2"><strong>تاریخ: </strong> {date}</p>
           </div>
           <div>
@@ -233,9 +244,9 @@ export default function BillingPage() {
                   {lineItems.map((li, idx) => (
                     <tr key={li.id} className="hover:bg-cyan-50/50 transition-colors">
                       <td className="p-2 border-l border-[#E2E8F0] font-urdu text-center text-[#334155]">{li.item}</td>
-                      <td className="p-2 border-l border-[#E2E8F0] text-center font-urdu text-[#334155]">{selectedCustomer ? `${selectedCustomer.code} - ${selectedCustomer.nameUrdu}` : "-"}</td>
+                      <td className="p-2 border-l border-[#E2E8F0] text-center font-urdu text-[#334155]">{li.customer ? `${li.customer.code} - ${li.customer.nameUrdu}` : "-"}</td>
                       <td className="p-2 border-l border-[#E2E8F0] font-bold text-center text-[#0F172A]">{li.weight}</td>
-                      <td className="p-2 border-l border-[#E2E8F0] text-center font-urdu text-[#334155]">{commissionPct}%</td>
+                      <td className="p-2 border-l border-[#E2E8F0] text-center font-urdu text-[#334155]">{li.commissionPct}%</td>
                       <td className="p-2 border-l border-[#E2E8F0] text-[#06b6d4] font-bold text-center">{li.rate}</td>
                       <td className="p-2 font-bold text-[#0F172A] text-center">{li.amount.toLocaleString()}</td>
                     </tr>
