@@ -134,12 +134,12 @@ export default function LedgerPage() {
     <div className="max-w-6xl mx-auto flex flex-col min-h-full pb-24">
 
       {/* Non-printable controls */}
-      <div className="print:hidden bg-white p-4 md:p-6 rounded-xl shadow-sm border border-[#E2E8F0] space-y-5">
+      <div className="print:hidden bg-white dark:bg-slate-800 p-4 md:p-6 rounded-xl shadow-sm border border-[#E2E8F0] dark:border-slate-700 space-y-5 transition-colors">
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[#E2E8F0] pb-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[#E2E8F0] dark:border-slate-700 pb-4">
 
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-[#0F172A] text-start flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-[#0F172A] dark:text-white text-start flex items-center gap-2">
               Customer Ledger
 
               <span className="text-sm font-urdu font-normal text-slate-500">
@@ -157,7 +157,7 @@ export default function LedgerPage() {
 
           {/* From Date */}
           <div className="md:col-span-3">
-            <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+            <label className="block text-xs font-bold text-[#0F172A] dark:text-slate-300 mb-1.5">
               From Date
             </label>
 
@@ -165,13 +165,13 @@ export default function LedgerPage() {
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="w-full border border-[#E2E8F0] rounded-lg p-2.5 focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4] outline-none bg-[#F8FAFC] text-[#0F172A] text-sm"
+              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-2.5 focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4] outline-none bg-[#F8FAFC] dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm"
             />
           </div>
 
           {/* To Date */}
           <div className="md:col-span-3">
-            <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+            <label className="block text-xs font-bold text-[#0F172A] dark:text-slate-300 mb-1.5">
               To Date
             </label>
 
@@ -179,19 +179,19 @@ export default function LedgerPage() {
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="w-full border border-[#E2E8F0] rounded-lg p-2.5 focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4] outline-none bg-[#F8FAFC] text-[#0F172A] text-sm"
+              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-2.5 focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4] outline-none bg-[#F8FAFC] dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm"
             />
           </div>
 
           {/* Agraee Group */}
           <div className="md:col-span-6">
-            <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+            <label className="block text-xs font-bold text-[#0F172A] dark:text-slate-300 mb-1.5">
               Agraee Group
             </label>
 
             <select
               defaultValue="All Groups"
-              className="w-full border border-[#E2E8F0] rounded-lg p-2.5 focus:border-[#06b6d4] outline-none bg-[#F8FAFC] text-[#0F172A] text-sm cursor-pointer"
+              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-2.5 focus:border-[#06b6d4] outline-none bg-[#F8FAFC] dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm cursor-pointer"
             >
               <option>All Groups</option>
               <option>Group A</option>
@@ -201,7 +201,7 @@ export default function LedgerPage() {
 
           {/* Account */}
           <div className="md:col-span-6">
-            <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+            <label className="block text-xs font-bold text-[#0F172A] dark:text-slate-300 mb-1.5">
               Account (گاہک کھاتہ)
             </label>
 
@@ -215,14 +215,14 @@ export default function LedgerPage() {
                 }}
                 onFocus={() => setShowAccountDropdown(true)}
                 placeholder="Search account name or code..."
-                className="w-full pl-10 pr-3 py-2.5 border border-[#E2E8F0] rounded-lg focus:outline-none focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4] bg-[#F8FAFC] font-urdu text-[#0F172A] text-sm"
+                className="w-full pl-10 pr-3 py-2.5 border border-[#E2E8F0] dark:border-slate-600 rounded-lg focus:outline-none focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4] bg-[#F8FAFC] dark:bg-slate-700 font-urdu text-[#0F172A] dark:text-white text-sm"
                 dir="rtl"
               />
 
               <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400 pointer-events-none" />
 
               {showAccountDropdown && (
-                <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-[#E2E8F0] rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
 
                   {filteredAccounts.length > 0 ? (
                     filteredAccounts.map((account) => (
@@ -233,7 +233,7 @@ export default function LedgerPage() {
                           e.preventDefault();
                           handleAccountSelect(account);
                         }}
-                        className="w-full text-start px-3 py-2.5 hover:bg-[#F1F5F9] border-b border-slate-100 last:border-b-0 transition-colors"
+                        className="w-full text-start px-3 py-2.5 hover:bg-[#F1F5F9] dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-700 last:border-b-0 transition-colors"
                       >
                         <div
                           className="font-urdu text-sm font-bold text-[#0F172A]"
@@ -260,7 +260,7 @@ export default function LedgerPage() {
 
           {/* Code */}
           <div className="md:col-span-3">
-            <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+            <label className="block text-xs font-bold text-[#0F172A] dark:text-slate-300 mb-1.5">
               Code
             </label>
 
@@ -268,19 +268,19 @@ export default function LedgerPage() {
               type="text"
               readOnly
               value={customer?.code ?? ""}
-              className="w-full border border-[#E2E8F0] rounded-lg p-2.5 outline-none bg-slate-50 font-bold text-[#06b6d4] text-sm text-center"
+              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-2.5 outline-none bg-slate-50 dark:bg-slate-700 font-bold text-[#06b6d4] text-sm text-center"
             />
           </div>
 
           {/* Voucher Type */}
           <div className="md:col-span-3">
-            <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+            <label className="block text-xs font-bold text-[#0F172A] dark:text-slate-300 mb-1.5">
               Voucher Type
             </label>
 
             <select
               defaultValue="All Vouchers"
-              className="w-full border border-[#E2E8F0] rounded-lg p-2.5 focus:border-[#06b6d4] outline-none bg-[#F8FAFC] text-[#0F172A] text-sm cursor-pointer"
+              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-2.5 focus:border-[#06b6d4] outline-none bg-[#F8FAFC] dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm cursor-pointer"
             >
               <option>All Vouchers</option>
               <option>Sales (سیلز)</option>
@@ -292,7 +292,7 @@ export default function LedgerPage() {
           {/* Checkboxes */}
           <div className="md:col-span-12 flex flex-wrap gap-8 pt-2">
 
-            <label className="flex items-center gap-2.5 text-sm font-bold text-[#0F172A] cursor-pointer group">
+            <label className="flex items-center gap-2.5 text-sm font-bold text-[#0F172A] dark:text-slate-300 cursor-pointer group">
               <input
                 type="checkbox"
                 className="w-4 h-4 accent-[#06b6d4] cursor-pointer"
@@ -304,7 +304,7 @@ export default function LedgerPage() {
               </span>
             </label>
 
-            <label className="flex items-center gap-2.5 text-sm font-bold text-[#0F172A] cursor-pointer group">
+            <label className="flex items-center gap-2.5 text-sm font-bold text-[#0F172A] dark:text-slate-300 cursor-pointer group">
               <input
                 type="checkbox"
                 className="w-4 h-4 accent-[#06b6d4] cursor-pointer"
@@ -321,15 +321,15 @@ export default function LedgerPage() {
       </div>
 
       {/* Printable Area */}
-      <div className="bg-white p-4 md:p-8 rounded-xl shadow-sm border border-[#E2E8F0] print:border-none print:shadow-none print:p-0 mt-6 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 p-4 md:p-8 rounded-xl shadow-sm border border-[#E2E8F0] dark:border-slate-700 print:border-none print:shadow-none print:p-0 mt-6 overflow-hidden transition-colors">
 
         {/* Print Header */}
-        <div className="border-b-2 border-[#0F172A] pb-6 mb-6">
+        <div className="border-b-2 border-[#0F172A] dark:border-slate-600 pb-6 mb-6">
 
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
 
             <div>
-              <h2 className="text-xl font-bold tracking-tight text-[#0F172A] text-start">
+              <h2 className="text-xl font-bold tracking-tight text-[#0F172A] dark:text-white text-start">
                 STATEMENT OF ACCOUNT (کھاتہ کی تفصیل)
               </h2>
 
@@ -337,15 +337,15 @@ export default function LedgerPage() {
                 {customer?.nameUrdu} - {customer?.nameEnglish}
               </div>
 
-              <div className="text-xs font-bold text-slate-500 text-start mt-1">
+              <div className="text-xs font-bold text-slate-500 dark:text-slate-400 text-start mt-1">
                 Account Code (اکاؤنٹ کوڈ): {customer?.code}
               </div>
             </div>
 
-            <div className="text-left md:text-right text-xs space-y-1.5 text-slate-600 bg-[#F8FAFC] p-3 rounded-lg border border-[#E2E8F0]">
+            <div className="text-left md:text-right text-xs space-y-1.5 text-slate-600 dark:text-slate-300 bg-[#F8FAFC] dark:bg-slate-700/50 p-3 rounded-lg border border-[#E2E8F0] dark:border-slate-700">
 
               <div>
-                <span className="font-bold text-[#0F172A]">
+                <span className="font-bold text-[#0F172A] dark:text-white">
                   Period (مدت):
                 </span>{" "}
                 {fromDate}
@@ -356,14 +356,14 @@ export default function LedgerPage() {
               </div>
 
               <div>
-                <span className="font-bold text-[#0F172A]">
+                <span className="font-bold text-[#0F172A] dark:text-white">
                   Printed On (پرنٹ کی تاریخ):
                 </span>{" "}
                 {printedDate}
               </div>
 
               <div>
-                <span className="font-bold text-[#0F172A]">
+                <span className="font-bold text-[#0F172A] dark:text-white">
                   Currency (کرنسی):
                 </span>{" "}
                 RS
@@ -374,12 +374,12 @@ export default function LedgerPage() {
         </div>
 
         {/* Ledger Table */}
-        <div className="overflow-x-auto rounded-lg border border-[#E2E8F0]">
+        <div className="overflow-x-auto rounded-lg border border-[#E2E8F0] dark:border-slate-700">
 
-          <table className="w-full text-left text-sm whitespace-nowrap font-medium text-slate-700">
+          <table className="w-full text-left text-sm whitespace-nowrap font-medium text-slate-700 dark:text-slate-300">
 
             <thead>
-              <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0] text-[11px] uppercase font-bold text-[#0F172A]">
+              <tr className="bg-[#F8FAFC] dark:bg-slate-700 border-b border-[#E2E8F0] dark:border-slate-600 text-[11px] uppercase font-bold text-[#0F172A] dark:text-slate-200">
 
                 <th className="py-3 px-4 text-start">
                   Date (تاریخ)
@@ -408,24 +408,24 @@ export default function LedgerPage() {
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-[#E2E8F0]">
+            <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-700">
 
               {transactionsWithBalance.map((tx) => (
                 <tr
                   key={tx.id}
-                  className="hover:bg-slate-50 transition-colors"
+                  className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                 >
 
-                  <td className="py-3 px-4 text-[#334155] text-start text-xs">
+                  <td className="py-3 px-4 text-[#334155] dark:text-slate-300 text-start text-xs">
                     {tx.date}
                   </td>
 
-                  <td className="py-3 px-4 font-bold text-[#0F172A] text-center text-xs">
+                  <td className="py-3 px-4 font-bold text-[#0F172A] dark:text-white text-center text-xs">
                     {tx.billNo || "-"}
                   </td>
 
                   {/* Description - text will wrap to next line */}
-                  <td className="py-3 px-4 font-bold text-[#0F172A] text-start text-xs font-urdu whitespace-normal break-words min-w-[250px] max-w-[500px]">
+                  <td className="py-3 px-4 font-bold text-[#0F172A] dark:text-white text-start text-xs font-urdu whitespace-normal break-words min-w-[250px] max-w-[500px]">
                     {tx.description}
                   </td>
 
@@ -441,7 +441,7 @@ export default function LedgerPage() {
                       : "-"}
                   </td>
 
-                  <td className="py-3 px-4 text-end font-black text-[#0F172A] text-xs bg-[#F8FAFC]/50">
+                  <td className="py-3 px-4 text-end font-black text-[#0F172A] dark:text-white text-xs bg-[#F8FAFC]/50 dark:bg-slate-800/50">
                     {tx.balance.toLocaleString()}
                   </td>
 
@@ -451,7 +451,7 @@ export default function LedgerPage() {
             </tbody>
 
             <tfoot>
-              <tr className="bg-[#0F172A] text-white">
+              <tr className="bg-[#064789] text-white">
 
                 <td
                   colSpan={2}
@@ -491,12 +491,12 @@ export default function LedgerPage() {
       </div>
 
       {/* BOTTOM ACTION BAR */}
-      <div className="-mx-4 sm:-mx-6 lg:-mx-8 bg-white border-t border-slate-200 p-4 z-30 flex justify-end gap-3 px-6 print:hidden mt-8 rounded-b-xl shadow-sm">
+      <div className="-mx-4 sm:-mx-6 lg:-mx-8 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 p-4 z-30 flex justify-end gap-3 px-6 print:hidden mt-8 rounded-b-xl shadow-sm transition-colors">
 
         <button
           type="button"
           onClick={handlePrint}
-          className="bg-[#1e293b] hover:bg-slate-800 text-white px-4 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
+          className="bg-[#064789] hover:bg-[#064789]/90 text-white px-4 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
         >
           <Printer className="h-4 w-4" />
           Print Special (پرنٹ سپیشل)

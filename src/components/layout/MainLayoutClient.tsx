@@ -9,7 +9,7 @@ export function MainLayoutClient({ children }: { children: React.ReactNode }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   return (
-    <div className="h-screen flex flex-col bg-[#F8FAFC] overflow-hidden">
+    <div className="h-screen flex flex-col bg-[#F8FAFC] dark:bg-slate-900 overflow-hidden transition-colors">
       {/* Fixed Full-Width Header */}
       <Header onMobileMenuClick={() => setIsMobileOpen(true)} isSidebarPinned={isPinned} setIsSidebarPinned={setIsPinned} />
 

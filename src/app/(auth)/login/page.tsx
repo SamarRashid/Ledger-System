@@ -15,9 +15,13 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setIsLoading(true);
+    
+    // Get stored password or use default
+    const savedPassword = localStorage.getItem("app_admin_password") || "ABC123";
+    
     // Simulate auth delay
     setTimeout(() => {
-      if (email === "admin@gmail.com" && password === "ABC123") {
+      if (email === "admin@gmail.com" && password === savedPassword) {
         router.push("/dashboard");
       } else {
         setError("Invalid email or password. Please try again.");

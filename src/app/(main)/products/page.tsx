@@ -21,6 +21,11 @@ export default function ProductConfigPage(): React.JSX.Element {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [successModalConfig, setSuccessModalConfig] = useState<{ isOpen: boolean; title: string; message: string }>({
+    isOpen: false,
+    title: "",
+    message: "",
+  });
 
   // Form States
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -111,10 +116,9 @@ export default function ProductConfigPage(): React.JSX.Element {
     handleReset();
   };
 
-  // Add or Update Product Function
   const handleSaveProduct = (): void => {
     if (!nameUrdu.trim() && !nameEnglish.trim()) {
-      alert("Kripya product ka naam darj karein.");
+      alert("Please enter the product name. (براہ کرم پروڈکٹ کا نام درج کریں۔)");
       return;
     }
 
@@ -134,6 +138,7 @@ export default function ProductConfigPage(): React.JSX.Element {
           : p
       );
       updateStorage(updated);
+      setSuccessModalConfig({ isOpen: true, title: "Updated! (اپ ڈیٹ ہو گیا!)", message: "Product updated successfully (پروڈکٹ کامیابی سے اپ ڈیٹ ہو گیا)" });
     } else {
       const newProduct: Product = {
         id: Date.now(),
@@ -147,6 +152,7 @@ export default function ProductConfigPage(): React.JSX.Element {
         status,
       };
       updateStorage([newProduct, ...products]);
+      setSuccessModalConfig({ isOpen: true, title: "Added! (شامل ہو گیا!)", message: "Product added successfully (پروڈکٹ کامیابی سے شامل ہو گیا)" });
     }
 
     handleCloseModal();
@@ -168,7 +174,7 @@ export default function ProductConfigPage(): React.JSX.Element {
 
   // Delete Product Function
   const handleDelete = (id: number): void => {
-    if (confirm("Kya aap is product ko delete karna chahte hain?")) {
+    if (confirm("Are you sure you want to delete this product? (کیا آپ واقعی اس پروڈکٹ کو ڈیلیٹ کرنا چاہتے ہیں؟)")) {
       const filtered = products.filter((p) => p.id !== id);
       updateStorage(filtered);
       if (editingId === id) handleCloseModal();
@@ -187,12 +193,12 @@ export default function ProductConfigPage(): React.JSX.Element {
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-16 p-4">
       {/* HEADER SECTION */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4 transition-colors">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <Package className="w-5 h-5 text-[#083D77]" />
+          <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <Package className="w-5 h-5 text-[#083D77] dark:text-blue-400" />
             Product Management
-            <span className="font-urdu font-normal text-slate-500 text-sm">(پروڈکٹ رجسٹریشن)</span>
+            <span className="font-urdu font-normal text-slate-500 dark:text-slate-400 text-sm">(پروڈکٹ رجسٹریشن)</span>
           </h1>
         </div>
 
@@ -204,8 +210,8 @@ export default function ProductConfigPage(): React.JSX.Element {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search product..."
-              className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#083D77] focus:outline-none"
+              placeholder="Search product... (پروڈکٹ تلاش کریں)"
+              className="w-full pl-9 pr-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-xs focus:ring-2 focus:ring-[#083D77] focus:outline-none bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
             />
           </div>
           <button
@@ -213,82 +219,82 @@ export default function ProductConfigPage(): React.JSX.Element {
             className="bg-[#083D77] hover:bg-[#062d59] text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer whitespace-nowrap shadow-sm"
           >
             <Plus className="w-4 h-4" />
-            Add New Product
+            Add New Product (نیا پروڈکٹ)
           </button>
         </div>
       </div>
 
       {/* PRODUCT TABLE SECTION */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
-        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4 transition-colors">
+        <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-3">
           <div className="flex items-center gap-2">
-            <Boxes className="w-5 h-5 text-[#083D77]" />
-            <h3 className="text-base font-bold text-slate-800">
-              Products List
-              <span className="text-xs text-slate-500 font-normal font-urdu mr-2">
-                (کل پروڈکٹس: {products.length})
+            <Boxes className="w-5 h-5 text-[#083D77] dark:text-blue-400" />
+            <h3 className="text-base font-bold text-slate-800 dark:text-white">
+              Products List <span className="font-urdu font-normal text-slate-500 dark:text-slate-400 text-sm">(پروڈکٹس کی فہرست)</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-normal font-urdu ml-2">
+                (Total / کل پروڈکٹس: {products.length})
               </span>
             </h3>
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-lg border border-slate-200">
+        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-[#083D77] text-white font-bold uppercase tracking-wider text-[11px]">
-                <th className="p-3 border-r border-white/20 text-center w-12">SR #</th>
-                <th className="p-3 border-r border-white/20 w-24">Code</th>
-                <th className="p-3 border-r border-white/20">Product Name</th>
-                <th className="p-3 border-r border-white/20 w-28">Category</th>
-                <th className="p-3 border-r border-white/20 text-right w-28">Pur. Price</th>
-                <th className="p-3 border-r border-white/20 text-right w-28">Sale Price</th>
-                <th className="p-3 border-r border-white/20 text-center w-24">Unit</th>
-                <th className="p-3 border-r border-white/20 text-center w-20">Status</th>
-                <th className="p-3 text-center w-20">Actions</th>
+              <tr className="bg-[#083D77] text-white font-bold tracking-wider text-[11px]">
+                <th className="p-3 border-r border-white/20 text-center w-12">SR #<br/><span className="font-urdu font-normal text-[10px]">(نمبر)</span></th>
+                <th className="p-3 border-r border-white/20 w-24">Code<br/><span className="font-urdu font-normal text-[10px]">(کوڈ)</span></th>
+                <th className="p-3 border-r border-white/20">Product Name<br/><span className="font-urdu font-normal text-[10px]">(پروڈکٹ کا نام)</span></th>
+                <th className="p-3 border-r border-white/20 w-28">Category<br/><span className="font-urdu font-normal text-[10px]">(کیٹیگری)</span></th>
+                <th className="p-3 border-r border-white/20 text-right w-28">Pur. Price<br/><span className="font-urdu font-normal text-[10px]">(خرید قیمت)</span></th>
+                <th className="p-3 border-r border-white/20 text-right w-28">Sale Price<br/><span className="font-urdu font-normal text-[10px]">(فروخت قیمت)</span></th>
+                <th className="p-3 border-r border-white/20 text-center w-24">Unit<br/><span className="font-urdu font-normal text-[10px]">(اکائی)</span></th>
+                <th className="p-3 border-r border-white/20 text-center w-20">Status<br/><span className="font-urdu font-normal text-[10px]">(حالت)</span></th>
+                <th className="p-3 text-center w-20">Actions<br/><span className="font-urdu font-normal text-[10px]">(عمل)</span></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700 font-medium text-slate-700 dark:text-slate-300">
               {filteredProducts.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="text-center py-8 text-slate-400 font-bold">
-                    کوئی پروڈکٹ موجود نہیں ہے۔
+                    No product found. (کوئی پروڈکٹ موجود نہیں ہے۔)
                   </td>
                 </tr>
               ) : (
                 filteredProducts.map((prod, idx) => (
-                  <tr key={prod.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-3 text-center border-r border-slate-100 font-bold text-slate-400">
+                  <tr key={prod.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                    <td className="p-3 text-center border-r border-slate-100 dark:border-slate-700 font-bold text-slate-400">
                       {idx + 1}
                     </td>
-                    <td className="p-3 border-r border-slate-100 font-mono font-bold text-[#083D77]">
+                    <td className="p-3 border-r border-slate-100 dark:border-slate-700 font-mono font-bold text-[#083D77] dark:text-blue-400">
                       {prod.code}
                     </td>
-                    <td className="p-3 border-r border-slate-100">
-                      <div className="font-bold text-slate-900 text-sm font-sans flex items-center gap-1.5 flex-wrap">
+                    <td className="p-3 border-r border-slate-100 dark:border-slate-700">
+                      <div className="font-bold text-slate-900 dark:text-white text-sm font-sans flex items-center gap-1.5 flex-wrap">
                         <span>{prod.nameEnglish}</span>
-                        <span className="font-urdu font-normal text-slate-500 text-xs">({prod.nameUrdu})</span>
+                        <span className="font-urdu font-normal text-slate-500 dark:text-slate-400 text-xs">({prod.nameUrdu})</span>
                       </div>
                     </td>
-                    <td className="p-3 border-r border-slate-100 text-slate-600">
+                    <td className="p-3 border-r border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300">
                       {prod.category}
                     </td>
-                    <td className="p-3 border-r border-slate-100 text-right font-mono text-slate-600">
+                    <td className="p-3 border-r border-slate-100 dark:border-slate-700 text-right font-mono text-slate-600 dark:text-slate-300">
                       RS {prod.purchasePrice.toLocaleString()}
                     </td>
-                    <td className="p-3 border-r border-slate-100 text-right font-mono font-bold text-emerald-700">
+                    <td className="p-3 border-r border-slate-100 dark:border-slate-700 text-right font-mono font-bold text-emerald-700 dark:text-emerald-400">
                       RS {prod.salePrice.toLocaleString()}
                     </td>
-                    <td className="p-3 border-r border-slate-100 text-center font-bold">
-                      <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700">
+                    <td className="p-3 border-r border-slate-100 dark:border-slate-700 text-center font-bold">
+                      <span className="bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded text-slate-700 dark:text-slate-300">
                         {prod.unit}
                       </span>
                     </td>
-                    <td className="p-3 border-r border-slate-100 text-center">
+                    <td className="p-3 border-r border-slate-100 dark:border-slate-700 text-center">
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           prod.status === "Active"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-slate-100 text-slate-500"
+                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400"
+                            : "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400"
                         }`}
                       >
                         {prod.status}
@@ -299,7 +305,7 @@ export default function ProductConfigPage(): React.JSX.Element {
                         <button
                           type="button"
                           onClick={() => handleEdit(prod)}
-                          className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors cursor-pointer"
+                          className="p-1.5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md transition-colors cursor-pointer"
                           title="Edit"
                         >
                           <Edit3 className="w-4 h-4" />
@@ -307,7 +313,7 @@ export default function ProductConfigPage(): React.JSX.Element {
                         <button
                           type="button"
                           onClick={() => handleDelete(prod.id)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+                          className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors cursor-pointer"
                           title="Delete"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -325,7 +331,7 @@ export default function ProductConfigPage(): React.JSX.Element {
       {/* MODAL POPUP FORM */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="bg-[#083D77] text-white px-6 py-4 flex justify-between items-center">
               <h2 className="text-base font-bold flex items-center gap-2">
@@ -346,89 +352,89 @@ export default function ProductConfigPage(): React.JSX.Element {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4" dir="rtl">
                 {/* Product Code */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">پروڈکٹ کوڈ (Code)</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Code (پروڈکٹ کوڈ)</label>
                   <input
                     type="text"
                     value={code}
                     readOnly
-                    className="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-100 text-slate-600 text-sm font-mono font-bold text-center"
+                    className="w-full p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 text-sm font-mono font-bold text-center"
                     dir="ltr"
                   />
                 </div>
 
                 {/* Urdu Name */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    پروڈکٹ کا نام (اردو) <span className="text-red-500">*</span>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Product Name Urdu (پروڈکٹ کا نام اردو) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={nameUrdu}
                     onChange={(e) => setNameUrdu(e.target.value)}
-                    placeholder="مثلاً: کپاس سوٹ"
-                    className="w-full p-2.5 border border-slate-300 rounded-lg text-sm font-urdu focus:ring-2 focus:ring-[#083D77] focus:outline-none bg-slate-50"
+                    placeholder="e.g. کپاس سوٹ"
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-urdu focus:ring-2 focus:ring-[#083D77] focus:outline-none bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white"
                   />
                 </div>
 
                 {/* English Name */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Name (English)</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Product Name English (پروڈکٹ کا نام انگریزی)</label>
                   <input
                     type="text"
                     value={nameEnglish}
                     onChange={(e) => setNameEnglish(e.target.value)}
                     placeholder="e.g. Cotton Suit"
-                    className="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#083D77] focus:outline-none bg-slate-50"
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-[#083D77] focus:outline-none bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white"
                     dir="ltr"
                   />
                 </div>
 
                 {/* Category */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">کیٹیگری (Category)</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Category (کیٹیگری)</label>
                   <input
                     type="text"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     placeholder="Fabric / General"
-                    className="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#083D77] focus:outline-none bg-slate-50 text-left"
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-[#083D77] focus:outline-none bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-left"
                     dir="ltr"
                   />
                 </div>
 
                 {/* Purchase Price */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">خرید قیمت (Purchase Price RS)</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Purchase Price RS (خرید قیمت)</label>
                   <input
                     type="number"
                     value={purchasePrice}
                     onChange={(e) => setPurchasePrice(e.target.value === "" ? "" : Number(e.target.value))}
                     placeholder="0"
-                    className="w-full p-2.5 border border-slate-300 rounded-lg text-sm font-bold text-slate-800 focus:ring-2 focus:ring-[#083D77] focus:outline-none bg-slate-50 text-left"
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-[#083D77] focus:outline-none bg-slate-50 dark:bg-slate-700 text-left"
                     dir="ltr"
                   />
                 </div>
 
                 {/* Sale Price */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">فروخت قیمت (Sale Price RS)</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Sale Price RS (فروخت قیمت)</label>
                   <input
                     type="number"
                     value={salePrice}
                     onChange={(e) => setSalePrice(e.target.value === "" ? "" : Number(e.target.value))}
                     placeholder="0"
-                    className="w-full p-2.5 border border-slate-300 rounded-lg text-sm font-bold text-slate-800 focus:ring-2 focus:ring-[#083D77] focus:outline-none bg-emerald-50 text-left"
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-[#083D77] focus:outline-none bg-emerald-50 dark:bg-slate-700 text-left"
                     dir="ltr"
                   />
                 </div>
 
                 {/* Unit */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">اکائی (Unit)</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Unit (اکائی)</label>
                   <select
                     value={unit}
                     onChange={(e) => setUnit(e.target.value)}
-                    className="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#083D77] focus:outline-none bg-slate-50 font-bold"
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-[#083D77] focus:outline-none bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white font-bold"
                   >
                     <option value="Meter">Meter (میٹر)</option>
                     <option value="Piece">Piece (پیس)</option>
@@ -440,11 +446,11 @@ export default function ProductConfigPage(): React.JSX.Element {
 
                 {/* Status */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">حالت (Status)</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Status (حالت)</label>
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as "Active" | "Inactive")}
-                    className="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#083D77] focus:outline-none bg-slate-50 font-bold"
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-[#083D77] focus:outline-none bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white font-bold"
                   >
                     <option value="Active">Active (فعال)</option>
                     <option value="Inactive">Inactive (غیر فعال)</option>
@@ -454,11 +460,11 @@ export default function ProductConfigPage(): React.JSX.Element {
             </div>
 
             {/* Modal Actions */}
-            <div className="bg-slate-50 border-t border-slate-200 px-6 py-3 flex justify-end gap-3">
+            <div className="bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 px-6 py-3 flex justify-end gap-3">
               <button
                 type="button"
                 onClick={handleCloseModal}
-                className="px-4 py-2 rounded-lg text-xs font-bold bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-lg text-xs font-bold bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
               >
                 Cancel (منسوخ کریں)
               </button>
@@ -468,7 +474,35 @@ export default function ProductConfigPage(): React.JSX.Element {
                 className="px-6 py-2 rounded-lg text-xs font-bold bg-[#083D77] hover:bg-[#062d59] text-white flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
               >
                 <Save className="w-4 h-4" />
-                {editingId ? "Update Product" : "Save Product"}
+                {editingId ? "Update Product (اپ ڈیٹ کریں)" : "Save Product (محفوظ کریں)"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SUCCESS MODAL POPUP */}
+      {successModalConfig.isOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-[#f0f4f8] dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-8 text-center space-y-6">
+              <div className="mx-auto w-24 h-24 bg-white dark:bg-slate-700 rounded-full flex items-center justify-center shadow-sm border border-slate-200 dark:border-slate-600">
+                <div className="w-20 h-20 rounded-full border-4 border-emerald-400 flex items-center justify-center">
+                  <svg className="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{successModalConfig.title}</h2>
+                <p className="text-slate-500 dark:text-slate-300 font-medium">{successModalConfig.message}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSuccessModalConfig({ isOpen: false, title: "", message: "" })}
+                className="w-24 py-2 rounded bg-[#5bc0de] hover:bg-[#46b8da] text-white font-bold transition-colors shadow-sm"
+              >
+                OK
               </button>
             </div>
           </div>

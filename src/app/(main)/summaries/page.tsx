@@ -25,16 +25,16 @@ export default function SummariesPage() {
     <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8 animate-in fade-in duration-500 pb-12">
       
       {/* Header & Controls - Glassmorphism Style */}
-      <div className="print:hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/80 backdrop-blur-xl p-5 lg:p-6 rounded-2xl shadow-sm border border-slate-200/60 relative overflow-hidden group">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 via-cyan-50/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+      <div className="print:hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl p-5 lg:p-6 rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-700/60 relative overflow-hidden group transition-colors">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 via-cyan-50/20 to-transparent dark:from-blue-900/20 dark:via-cyan-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
         
         <div className="flex items-center gap-4 relative z-10">
-          <div className="bg-gradient-to-br from-[#1e293b] to-slate-800 p-3 rounded-xl shadow-lg shadow-slate-900/20">
+          <div className="bg-gradient-to-br from-[#1e293b] to-slate-800 dark:from-blue-900 dark:to-slate-800 p-3 rounded-xl shadow-lg shadow-slate-900/20">
             <LayoutDashboard className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-900 text-start">Daily Summaries <span className="text-slate-400 font-normal text-lg ml-1">(روزانہ کھاتہ خلاصہ)</span></h1>
-            <p className="text-sm text-slate-500 font-medium mt-0.5 text-start">Monitor your daily business performance</p>
+            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white text-start">Daily Summaries <span className="text-slate-400 dark:text-slate-500 font-normal text-lg ml-1">(روزانہ کھاتہ خلاصہ)</span></h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5 text-start">Monitor your daily business performance</p>
           </div>
         </div>
 
@@ -45,12 +45,12 @@ export default function SummariesPage() {
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#06b6d4] focus:ring-2 focus:ring-[#06b6d4]/20 text-slate-700 font-medium transition-all shadow-sm hover:border-slate-300"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:border-[#06b6d4] focus:ring-2 focus:ring-[#06b6d4]/20 text-slate-700 dark:text-slate-200 font-medium transition-all shadow-sm hover:border-slate-300 dark:hover:border-slate-500"
             />
           </div>
           <button 
             onClick={handlePrint}
-            className="w-full sm:w-auto bg-[#1e293b] hover:bg-[#0f172a] text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-[0_4px_14px_0_rgba(30,41,43,0.39)] hover:shadow-[0_6px_20px_rgba(30,41,43,0.23)] hover:-translate-y-0.5"
+            className="w-full sm:w-auto bg-[#1e293b] dark:bg-slate-700 hover:bg-[#0f172a] dark:hover:bg-slate-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-[0_4px_14px_0_rgba(30,41,43,0.39)] hover:shadow-[0_6px_20px_rgba(30,41,43,0.23)] hover:-translate-y-0.5"
           >
             <Printer className="h-4 w-4" />
             Print / Export PDF (پرنٹ کریں)
@@ -70,50 +70,50 @@ export default function SummariesPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 print:hidden">
           
           {/* Card 1 */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group overflow-hidden relative">
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity transform group-hover:scale-110 duration-500">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group overflow-hidden relative">
+            <div className="absolute top-0 right-0 p-4 opacity-5 dark:opacity-10 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500 text-slate-900 dark:text-white">
                <Receipt className="w-24 h-24" />
             </div>
             <div className="flex justify-between items-start mb-4 relative z-10">
-              <div className="bg-blue-50 text-blue-600 p-2.5 rounded-xl">
+              <div className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 p-2.5 rounded-xl">
                 <Receipt className="h-5 w-5" />
               </div>
             </div>
             <div className="relative z-10">
-              <h3 className="text-slate-500 font-semibold text-sm mb-1 uppercase tracking-wider">Total Bills <span className="font-urdu normal-case">(کل بل)</span></h3>
-              <div className="text-3xl font-black text-slate-900">{MOCK_SALES.length}</div>
+              <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-sm mb-1 uppercase tracking-wider">Total Bills <span className="font-urdu normal-case">(کل بل)</span></h3>
+              <div className="text-3xl font-black text-slate-900 dark:text-white">{MOCK_SALES.length}</div>
             </div>
           </div>
 
           {/* Card 2 */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group overflow-hidden relative">
-             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity transform group-hover:scale-110 duration-500">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group overflow-hidden relative">
+             <div className="absolute top-0 right-0 p-4 opacity-5 dark:opacity-10 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500 text-slate-900 dark:text-white">
                <Scale className="w-24 h-24" />
             </div>
             <div className="flex justify-between items-start mb-4 relative z-10">
-              <div className="bg-emerald-50 text-emerald-600 p-2.5 rounded-xl">
+              <div className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 p-2.5 rounded-xl">
                 <Scale className="h-5 w-5" />
               </div>
             </div>
             <div className="relative z-10">
-              <h3 className="text-slate-500 font-semibold text-sm mb-1 uppercase tracking-wider">Total Weight <span className="font-urdu normal-case">(کل وزن کلو)</span></h3>
-              <div className="text-3xl font-black text-slate-900">{totalWeight.toLocaleString()} <span className="text-lg text-slate-400 font-medium">KG</span></div>
+              <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-sm mb-1 uppercase tracking-wider">Total Weight <span className="font-urdu normal-case">(کل وزن کلو)</span></h3>
+              <div className="text-3xl font-black text-slate-900 dark:text-white">{totalWeight.toLocaleString()} <span className="text-lg text-slate-400 dark:text-slate-500 font-medium">KG</span></div>
             </div>
           </div>
 
           {/* Card 3 */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group overflow-hidden relative">
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity transform group-hover:scale-110 duration-500">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group overflow-hidden relative">
+            <div className="absolute top-0 right-0 p-4 opacity-5 dark:opacity-10 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500 text-slate-900 dark:text-white">
                <Wallet className="w-24 h-24" />
             </div>
             <div className="flex justify-between items-start mb-4 relative z-10">
-              <div className="bg-amber-50 text-amber-600 p-2.5 rounded-xl">
+              <div className="bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 p-2.5 rounded-xl">
                 <Wallet className="h-5 w-5" />
               </div>
             </div>
             <div className="relative z-10">
-              <h3 className="text-slate-500 font-semibold text-sm mb-1 uppercase tracking-wider">Total Amount <span className="font-urdu normal-case">(کل رقم)</span></h3>
-              <div className="text-3xl font-black text-slate-900">{totalNetTotal.toLocaleString()} <span className="text-lg text-slate-400 font-medium">RS</span></div>
+              <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-sm mb-1 uppercase tracking-wider">Total Amount <span className="font-urdu normal-case">(کل رقم)</span></h3>
+              <div className="text-3xl font-black text-slate-900 dark:text-white">{totalNetTotal.toLocaleString()} <span className="text-lg text-slate-400 dark:text-slate-500 font-medium">RS</span></div>
             </div>
           </div>
 
@@ -158,17 +158,17 @@ export default function SummariesPage() {
         </div>
 
         {/* Daily Sales Detail Table */}
-        <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden print:shadow-none border border-slate-100 print:border-none">
-          <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50">
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Receipt className="w-5 h-5 text-slate-400" />
-              Daily Sales Detail <span className="text-slate-500 font-normal text-sm font-urdu ml-1">(روزانہ سیل کیٹٹھا)</span>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden print:shadow-none border border-slate-100 dark:border-slate-700 print:border-none transition-colors">
+          <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Receipt className="w-5 h-5 text-slate-400 dark:text-slate-500" />
+              Daily Sales Detail <span className="text-slate-500 dark:text-slate-400 font-normal text-sm font-urdu ml-1">(روزانہ سیل کیٹٹھا)</span>
             </h2>
           </div>
           
           <div className="overflow-x-auto">
-            <table className="w-full text-left whitespace-nowrap text-sm font-medium text-slate-700">
-              <thead className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase font-bold text-slate-500 tracking-wider">
+            <table className="w-full text-left whitespace-nowrap text-sm font-medium text-slate-700 dark:text-slate-300">
+              <thead className="bg-slate-50/80 dark:bg-slate-700/80 border-b border-slate-200 dark:border-slate-600 text-xs uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">
                 <tr>
                   <th className="px-5 py-4 text-start">Invoice No <br/><span className="font-urdu font-normal normal-case opacity-80">(بل نمبر)</span></th>
                   <th className="px-5 py-4 text-start">Customer Name <br/><span className="font-urdu font-normal normal-case opacity-80">(کسٹمر کا نام)</span></th>
@@ -176,23 +176,23 @@ export default function SummariesPage() {
                   <th className="px-5 py-4 text-end">Net Total RS <br/><span className="font-urdu font-normal normal-case opacity-80">(خالص کل رقم)</span></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                 {MOCK_SALES.map((sale) => (
-                  <tr key={sale.id} className="hover:bg-blue-50/50 transition-colors group cursor-default">
-                    <td className="px-5 py-4 font-bold text-slate-900 text-start group-hover:text-blue-600 transition-colors">{sale.invoiceNo}</td>
-                    <td className="px-5 py-4 text-start text-slate-600">{sale.customer}</td>
-                    <td className="px-5 py-4 text-end text-slate-600">{sale.weight.toLocaleString()}</td>
-                    <td className="px-5 py-4 text-end font-black text-slate-900 group-hover:text-blue-600 transition-colors">{sale.netTotal.toLocaleString()} RS</td>
+                  <tr key={sale.id} className="hover:bg-blue-50/50 dark:hover:bg-slate-700/50 transition-colors group cursor-default">
+                    <td className="px-5 py-4 font-bold text-slate-900 dark:text-white text-start group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{sale.invoiceNo}</td>
+                    <td className="px-5 py-4 text-start text-slate-600 dark:text-slate-300">{sale.customer}</td>
+                    <td className="px-5 py-4 text-end text-slate-600 dark:text-slate-300">{sale.weight.toLocaleString()}</td>
+                    <td className="px-5 py-4 text-end font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{sale.netTotal.toLocaleString()} RS</td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-slate-50 font-black border-t-2 border-slate-200 text-base text-slate-900">
+              <tfoot className="bg-slate-50 dark:bg-slate-800 font-black border-t-2 border-slate-200 dark:border-slate-600 text-base text-slate-900 dark:text-white">
                 <tr>
-                  <td colSpan={2} className="px-5 py-4 text-end text-slate-500 uppercase text-xs tracking-wider">
+                  <td colSpan={2} className="px-5 py-4 text-end text-slate-500 dark:text-slate-400 uppercase text-xs tracking-wider">
                     Grand Total <span className="font-urdu normal-case">(مجموعی رقم)</span>:
                   </td>
-                  <td className="px-5 py-4 text-end">{totalWeight.toLocaleString()} <span className="text-xs text-slate-500 font-bold">KG</span></td>
-                  <td className="px-5 py-4 text-end text-[#06b6d4]">{totalNetTotal.toLocaleString()} <span className="text-xs text-slate-500 font-bold">RS</span></td>
+                  <td className="px-5 py-4 text-end">{totalWeight.toLocaleString()} <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">KG</span></td>
+                  <td className="px-5 py-4 text-end text-[#06b6d4] dark:text-cyan-400">{totalNetTotal.toLocaleString()} <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">RS</span></td>
                 </tr>
               </tfoot>
             </table>

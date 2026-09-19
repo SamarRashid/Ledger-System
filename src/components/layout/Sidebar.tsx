@@ -70,7 +70,7 @@ export function Sidebar({ isPinned, setIsPinned, isMobileOpen, setIsMobileOpen }
   return (
     <aside 
       className={cn(
-        "z-50 h-full bg-[#083D77] text-white transition-all duration-300 ease-in-out flex flex-col shadow-xl border-r border-[#D9F0FF]/30",
+        "z-50 h-full bg-[#083D77] dark:bg-slate-950 text-white transition-all duration-300 ease-in-out flex flex-col shadow-xl border-r border-[#D9F0FF]/30 dark:border-slate-800",
         isExpandedDesktop ? "w-64" : "w-20",
         isMobileOpen ? "fixed inset-y-0 left-0 translate-x-0 w-64" : "hidden md:flex md:translate-x-0 relative"
       )}
@@ -106,7 +106,7 @@ export function Sidebar({ isPinned, setIsPinned, isMobileOpen, setIsMobileOpen }
                   onClick={() => setIsConfigOpen(!isConfigOpen)}
                   className={cn(
                     "group relative flex items-center h-[46px] rounded-lg transition-all duration-200 cursor-pointer overflow-hidden whitespace-nowrap shrink-0 w-full text-left",
-                    isActive ? "bg-[#FEFFFEd] text-white font-semibold shadow-md mx-1" : "text-slate-300 hover:bg-slate-800/80 hover:text-[#23232] mx-1"
+                    isActive ? "bg-white/10 dark:bg-slate-800 text-white font-semibold shadow-md mx-1" : "text-slate-300 hover:bg-slate-800/80 mx-1"
                   )}
                   title={(!isExpandedDesktop && !isMobileOpen) ? `${link.labelEn} - ${link.labelUr}` : undefined}
                 >
@@ -168,7 +168,7 @@ export function Sidebar({ isPinned, setIsPinned, isMobileOpen, setIsMobileOpen }
               onClick={() => setIsMobileOpen && setIsMobileOpen(false)}
               className={cn(
                 "group relative flex items-center h-[46px] rounded-lg transition-all duration-200 cursor-pointer overflow-hidden whitespace-nowrap shrink-0",
-                isActive ? "bg-[#FEFFFEd] text-white font-semibold shadow-md mx-1" : "text-slate-300 hover:bg-slate-800/80 hover:text-[#23232] mx-1"
+                isActive ? "bg-white/10 dark:bg-slate-800 text-white font-semibold shadow-md mx-1" : "text-slate-300 hover:bg-slate-800/80 mx-1"
               )}
               title={(!isExpandedDesktop && !isMobileOpen) ? `${link.labelEn} - ${link.labelUr}` : undefined}
             >

@@ -112,7 +112,7 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3">
         </div>
 
-        <p className="text-[15px] md:text-[16px] text-[#000000] tracking-wide">
+        <p className="text-[15px] md:text-[16px] text-[#000000] dark:text-white tracking-wide">
           Quick Actions
         </p>
 
@@ -123,23 +123,23 @@ export default function DashboardPage() {
         {/* Today's Sales */}
         <Link
           href="/summaries"
-          className="group bg-white p-5 lg:p-6 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.06)] border border-[#E2E8F0] hover:border-[#173753]/30 hover:shadow-[0_12px_30px_rgba(8,61,119,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden min-h-[120px]"
+          className="group bg-white dark:bg-slate-800 p-5 lg:p-6 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.06)] dark:shadow-none border border-[#E2E8F0] dark:border-slate-700 hover:border-[#173753]/30 dark:hover:border-blue-500/50 hover:shadow-[0_12px_30px_rgba(8,61,119,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden min-h-[120px]"
         >
-          <div className="absolute top-4 right-4 h-10 w-10 bg-[#173753]/10 text-[#2892D7] rounded-xl flex items-center justify-center shrink-0 z-10 group-hover:scale-110 group-hover:bg-[#173753]/15 transition-all duration-300">
+          <div className="absolute top-4 right-4 h-10 w-10 bg-[#173753]/10 dark:bg-blue-900/30 text-[#2892D7] dark:text-blue-400 rounded-xl flex items-center justify-center shrink-0 z-10 group-hover:scale-110 group-hover:bg-[#173753]/15 transition-all duration-300">
             <TrendingUp className="h-5 w-5" />
           </div>
 
           <div className="flex flex-col relative z-10 flex-1">
-            <h3 className="text-[16px] font-bold text-black mb-2 pr-12 flex items-center gap-1.5 group-hover:text-[#2892D7] transition-colors truncate">
+            <h3 className="text-[16px] font-bold text-black dark:text-white mb-2 pr-12 flex items-center gap-1.5 group-hover:text-[#2892D7] dark:group-hover:text-blue-400 transition-colors truncate">
               Today's Sales
 
-              <span className="font-urdu text-[12px] font-medium text-slate-400 whitespace-nowrap">
+              <span className="font-urdu text-[12px] font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap">
                 (آج کی فروخت)
               </span>
             </h3>
 
             <div className="text-left mt-auto">
-              <span className="text-[17px] font-extrabold text-[#173753] tracking-tight">
+              <span className="text-[17px] font-extrabold text-[#173753] dark:text-blue-100 tracking-tight">
                 2,450,000
               </span>
 
@@ -153,23 +153,23 @@ export default function DashboardPage() {
         {/* Cash Received */}
         <Link
           href="/cash-receipt"
-          className="group bg-white p-5 lg:p-6 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.06)] border border-[#E2E8F0] hover:border-[#173753]/30 hover:shadow-[0_12px_30px_rgba(8,61,119,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden min-h-[120px]"
+          className="group bg-white dark:bg-slate-800 p-5 lg:p-6 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.06)] dark:shadow-none border border-[#E2E8F0] dark:border-slate-700 hover:border-[#173753]/30 dark:hover:border-emerald-500/50 hover:shadow-[0_12px_30px_rgba(8,61,119,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden min-h-[120px]"
         >
-          <div className="absolute top-4 right-4 h-10 w-10 bg-[#173753]/10 text-[#2892D7] rounded-xl flex items-center justify-center shrink-0 z-10 group-hover:scale-110 group-hover:bg-[#173753]/15 transition-all duration-300">
+          <div className="absolute top-4 right-4 h-10 w-10 bg-[#173753]/10 dark:bg-emerald-900/30 text-[#2892D7] dark:text-emerald-400 rounded-xl flex items-center justify-center shrink-0 z-10 group-hover:scale-110 group-hover:bg-[#173753]/15 transition-all duration-300">
             <Wallet className="h-5 w-5" />
           </div>
 
           <div className="flex flex-col relative z-10 flex-1">
-            <h3 className="text-[16px] font-bold text-black mb-2 pr-12 flex items-center gap-1.5 group-hover:text-[#2892D7] transition-colors truncate">
+            <h3 className="text-[16px] font-bold text-black dark:text-white mb-2 pr-12 flex items-center gap-1.5 group-hover:text-[#2892D7] dark:group-hover:text-emerald-400 transition-colors truncate">
               Cash Received
 
-              <span className="font-urdu text-[12px] font-medium text-slate-400 whitespace-nowrap">
+              <span className="font-urdu text-[12px] font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap">
                 (آج موصول)
               </span>
             </h3>
 
             <div className="text-left mt-auto">
-              <span className="text-[17px] font-extrabold text-[#173753] tracking-tight">
+              <span className="text-[17px] font-extrabold text-[#173753] dark:text-blue-100 tracking-tight">
                 850,000
               </span>
 
@@ -183,23 +183,23 @@ export default function DashboardPage() {
         {/* Outstanding */}
         <Link
           href="/ledger"
-          className="group bg-white p-5 lg:p-6 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.06)] border border-[#E2E8F0] hover:border-[#173753]/30 hover:shadow-[0_12px_30px_rgba(8,61,119,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden min-h-[120px]"
+          className="group bg-white dark:bg-slate-800 p-5 lg:p-6 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.06)] dark:shadow-none border border-[#E2E8F0] dark:border-slate-700 hover:border-[#173753]/30 dark:hover:border-rose-500/50 hover:shadow-[0_12px_30px_rgba(8,61,119,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden min-h-[120px]"
         >
-          <div className="absolute top-4 right-4 h-10 w-10 bg-[#173753]/10 text-[#2892D7] rounded-xl flex items-center justify-center shrink-0 z-10 group-hover:scale-110 group-hover:bg-[#173753]/15 transition-all duration-300">
+          <div className="absolute top-4 right-4 h-10 w-10 bg-[#173753]/10 dark:bg-rose-900/30 text-[#2892D7] dark:text-rose-400 rounded-xl flex items-center justify-center shrink-0 z-10 group-hover:scale-110 group-hover:bg-[#173753]/15 transition-all duration-300">
             <Users className="h-5 w-5" />
           </div>
 
           <div className="flex flex-col relative z-10 flex-1">
-            <h3 className="text-[16px] font-bold text-black mb-2 pr-12 flex items-center gap-1.5 group-hover:text-[#2892D7] transition-colors truncate">
+            <h3 className="text-[16px] font-bold text-black dark:text-white mb-2 pr-12 flex items-center gap-1.5 group-hover:text-[#2892D7] dark:group-hover:text-rose-400 transition-colors truncate">
               Outstanding
 
-              <span className="font-urdu text-[12px] font-medium text-slate-400 whitespace-nowrap">
+              <span className="font-urdu text-[12px] font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap">
                 (بقایا وصولیاں)
               </span>
             </h3>
 
             <div className="text-left mt-auto">
-              <span className="text-[17px] font-extrabold text-[#173753] tracking-tight">
+              <span className="text-[17px] font-extrabold text-[#173753] dark:text-blue-100 tracking-tight">
                 15.4M
               </span>
 
@@ -213,23 +213,23 @@ export default function DashboardPage() {
         {/* Commission Earned */}
         <Link
           href="/receipts"
-          className="group bg-white p-5 lg:p-6 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.06)] border border-[#E2E8F0] hover:border-[#173753]/30 hover:shadow-[0_12px_30px_rgba(8,61,119,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden min-h-[120px]"
+          className="group bg-white dark:bg-slate-800 p-5 lg:p-6 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.06)] dark:shadow-none border border-[#E2E8F0] dark:border-slate-700 hover:border-[#173753]/30 dark:hover:border-purple-500/50 hover:shadow-[0_12px_30px_rgba(8,61,119,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden min-h-[120px]"
         >
-          <div className="absolute top-4 right-4 h-10 w-10 bg-[#173753]/10 text-[#2892D7] rounded-xl flex items-center justify-center shrink-0 z-10 group-hover:scale-110 group-hover:bg-[#173753]/15 transition-all duration-300">
+          <div className="absolute top-4 right-4 h-10 w-10 bg-[#173753]/10 dark:bg-purple-900/30 text-[#2892D7] dark:text-purple-400 rounded-xl flex items-center justify-center shrink-0 z-10 group-hover:scale-110 group-hover:bg-[#173753]/15 transition-all duration-300">
             <FileText className="h-5 w-5" />
           </div>
 
           <div className="flex flex-col relative z-10 flex-1">
-            <h3 className="text-[16px] font-bold text-black mb-2 pr-12 flex items-center gap-1.5 group-hover:text-[#2892D7] transition-colors truncate">
+            <h3 className="text-[16px] font-bold text-black dark:text-white mb-2 pr-12 flex items-center gap-1.5 group-hover:text-[#2892D7] dark:group-hover:text-purple-400 transition-colors truncate">
               Commission 8%
 
-              <span className="font-urdu text-[12px] font-medium text-slate-400 whitespace-nowrap">
+              <span className="font-urdu text-[12px] font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap">
                 (کمیشن)
               </span>
             </h3>
 
             <div className="text-left mt-auto">
-              <span className="text-[17px] font-extrabold text-[#173753] tracking-tight">
+              <span className="text-[17px] font-extrabold text-[#173753] dark:text-blue-100 tracking-tight">
                 196,000
               </span>
 
@@ -253,14 +253,14 @@ export default function DashboardPage() {
         {/* Account Index */}
         <Link
           href="/ledger"
-          className="group bg-white p-5 lg:p-6 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.06)] border border-[#E2E8F0] hover:border-[#173753]/30 hover:shadow-[0_12px_30px_rgba(8,61,119,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden min-h-[120px]"
+          className="group bg-white dark:bg-slate-800 p-5 lg:p-6 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.06)] dark:shadow-none border border-[#E2E8F0] dark:border-slate-700 hover:border-[#173753]/30 dark:hover:border-slate-500 hover:shadow-[0_12px_30px_rgba(8,61,119,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden min-h-[120px]"
         >
-          <div className="absolute top-4 right-4 h-10 w-10 bg-[#173753]/5 text-[#2892D7] rounded-xl flex items-center justify-center shrink-0 z-10 group-hover:scale-110 group-hover:bg-[#173753]/10 transition-all duration-300">
+          <div className="absolute top-4 right-4 h-10 w-10 bg-[#173753]/5 dark:bg-slate-700 text-[#2892D7] dark:text-slate-300 rounded-xl flex items-center justify-center shrink-0 z-10 group-hover:scale-110 group-hover:bg-[#173753]/10 transition-all duration-300">
             <BookOpen className="h-5 w-5" />
           </div>
 
           <div className="flex flex-col relative z-10 flex-1 justify-center">
-            <h3 className="text-[16px] font-bold text-black mb-1 pr-12 group-hover:text-[#2892D7] transition-colors">
+            <h3 className="text-[16px] font-bold text-black dark:text-white mb-1 pr-12 group-hover:text-[#2892D7] dark:group-hover:text-slate-300 transition-colors">
               Account Index
             </h3>
 
@@ -273,14 +273,14 @@ export default function DashboardPage() {
         {/* Item List */}
         <Link
           href="/item-list"
-          className="group bg-white p-5 lg:p-6 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.06)] border border-[#E2E8F0] hover:border-[#173753]/30 hover:shadow-[0_12px_30px_rgba(8,61,119,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden min-h-[120px]"
+          className="group bg-white dark:bg-slate-800 p-5 lg:p-6 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.06)] dark:shadow-none border border-[#E2E8F0] dark:border-slate-700 hover:border-[#173753]/30 dark:hover:border-slate-500 hover:shadow-[0_12px_30px_rgba(8,61,119,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden min-h-[120px]"
         >
-          <div className="absolute top-4 right-4 h-10 w-10 bg-[#173753]/5 text-[#2892D7] rounded-xl flex items-center justify-center shrink-0 z-10 group-hover:scale-110 group-hover:bg-[#173753]/10 transition-all duration-300">
+          <div className="absolute top-4 right-4 h-10 w-10 bg-[#173753]/5 dark:bg-slate-700 text-[#2892D7] dark:text-slate-300 rounded-xl flex items-center justify-center shrink-0 z-10 group-hover:scale-110 group-hover:bg-[#173753]/10 transition-all duration-300">
             <List className="h-5 w-5" />
           </div>
 
           <div className="flex flex-col relative z-10 flex-1 justify-center">
-            <h3 className="text-[16px] font-bold text-black mb-1 pr-12 group-hover:text-[#2892D7] transition-colors">
+            <h3 className="text-[16px] font-bold text-black dark:text-white mb-1 pr-12 group-hover:text-[#2892D7] dark:group-hover:text-slate-300 transition-colors">
               Item List
             </h3>
 
@@ -293,14 +293,14 @@ export default function DashboardPage() {
         {/* General Balance */}
         <Link
           href="/ledger"
-          className="group bg-white p-5 lg:p-6 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.06)] border border-[#E2E8F0] hover:border-[#173753]/30 hover:shadow-[0_12px_30px_rgba(8,61,119,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden min-h-[120px]"
+          className="group bg-white dark:bg-slate-800 p-5 lg:p-6 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.06)] dark:shadow-none border border-[#E2E8F0] dark:border-slate-700 hover:border-[#173753]/30 dark:hover:border-slate-500 hover:shadow-[0_12px_30px_rgba(8,61,119,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden min-h-[120px]"
         >
-          <div className="absolute top-4 right-4 h-10 w-10 bg-[#173753]/5 text-[#2892D7] rounded-xl flex items-center justify-center shrink-0 z-10 group-hover:scale-110 group-hover:bg-[#173753]/10 transition-all duration-300">
+          <div className="absolute top-4 right-4 h-10 w-10 bg-[#173753]/5 dark:bg-slate-700 text-[#2892D7] dark:text-slate-300 rounded-xl flex items-center justify-center shrink-0 z-10 group-hover:scale-110 group-hover:bg-[#173753]/10 transition-all duration-300">
             <FileText className="h-5 w-5" />
           </div>
 
           <div className="flex flex-col relative z-10 flex-1 justify-center">
-            <h3 className="text-[16px] font-bold text-black mb-1 pr-12 group-hover:text-[#2892D7] transition-colors">
+            <h3 className="text-[16px] font-bold text-black dark:text-white mb-1 pr-12 group-hover:text-[#2892D7] dark:group-hover:text-slate-300 transition-colors">
               General Balance
             </h3>
 
@@ -313,14 +313,14 @@ export default function DashboardPage() {
         {/* Daily Dispatch */}
         <Link
           href="/summaries"
-          className="group bg-white p-5 lg:p-6 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.06)] border border-[#E2E8F0] hover:border-[#173753]/30 hover:shadow-[0_12px_30px_rgba(8,61,119,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden min-h-[120px]"
+          className="group bg-white dark:bg-slate-800 p-5 lg:p-6 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.06)] dark:shadow-none border border-[#E2E8F0] dark:border-slate-700 hover:border-[#173753]/30 dark:hover:border-slate-500 hover:shadow-[0_12px_30px_rgba(8,61,119,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden min-h-[120px]"
         >
-          <div className="absolute top-4 right-4 h-10 w-10 bg-[#173753]/5 text-[#2892D7] rounded-xl flex items-center justify-center shrink-0 z-10 group-hover:scale-110 group-hover:bg-[#173753]/10 transition-all duration-300">
+          <div className="absolute top-4 right-4 h-10 w-10 bg-[#173753]/5 dark:bg-slate-700 text-[#2892D7] dark:text-slate-300 rounded-xl flex items-center justify-center shrink-0 z-10 group-hover:scale-110 group-hover:bg-[#173753]/10 transition-all duration-300">
             <TrendingUp className="h-5 w-5" />
           </div>
 
           <div className="flex flex-col relative z-10 flex-1 justify-center">
-            <h3 className="text-[16px] font-bold text-black mb-1 pr-12 group-hover:text-[#2892D7] transition-colors">
+            <h3 className="text-[16px] font-bold text-black dark:text-white mb-1 pr-12 group-hover:text-[#2892D7] dark:group-hover:text-slate-300 transition-colors">
               Daily Dispatch
             </h3>
 
@@ -340,10 +340,10 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3">
 
           <div>
-            <h2 className="text-[17px] md:text-[18px] text-[#000000] flex items-center gap-2 tracking-tight">
+            <h2 className="text-[17px] md:text-[18px] text-[#000000] dark:text-white flex items-center gap-2 tracking-tight">
               Financial Activity Trend
 
-              <span className="font-urdu text-slate-500 font-medium text-[12px]">
+              <span className="font-urdu text-slate-500 dark:text-slate-400 font-medium text-[12px]">
                 (مالی سرگرمیوں کا جائزہ)
               </span>
             </h2>
@@ -352,25 +352,25 @@ export default function DashboardPage() {
         </div>
 
         {/* Functional Date Picker */}
-        <div className="flex items-center bg-white border border-[#E2E8F0] hover:border-[#083D77]/30 transition-all duration-200 rounded-xl px-2 shadow-sm hover:shadow-md">
+        <div className="flex items-center bg-white dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 hover:border-[#083D77]/30 dark:hover:border-blue-500/50 transition-all duration-200 rounded-xl px-2 shadow-sm hover:shadow-md">
 
           <div className="flex items-center gap-2 px-2 py-1.5">
             <input
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="bg-transparent border-none text-[13px] font-semibold text-[#083D77] focus:outline-none focus:ring-0 cursor-pointer w-[110px]"
+              className="bg-transparent border-none text-[13px] font-semibold text-[#083D77] dark:text-blue-400 focus:outline-none focus:ring-0 cursor-pointer w-[110px]"
             />
           </div>
 
-          <div className="h-5 w-px bg-slate-200"></div>
+          <div className="h-5 w-px bg-slate-200 dark:bg-slate-700"></div>
 
           <div className="flex items-center gap-2 px-2 py-1.5">
             <input
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="bg-transparent border-none text-[13px] font-semibold text-[#083D77] focus:outline-none focus:ring-0 cursor-pointer w-[110px]"
+              className="bg-transparent border-none text-[13px] font-semibold text-[#083D77] dark:text-blue-400 focus:outline-none focus:ring-0 cursor-pointer w-[110px]"
             />
           </div>
 
@@ -380,7 +380,7 @@ export default function DashboardPage() {
       {/* =========================================================
           MAIN GRAPH
       ========================================================= */}
-      <div className="w-full bg-white border border-[#E2E8F0] rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.05)] p-6 pt-8 mt-2 hover:shadow-[0_10px_30px_rgba(8,61,119,0.08)] transition-shadow duration-300">
+      <div className="w-full bg-white dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.05)] dark:shadow-none p-6 pt-8 mt-2 hover:shadow-[0_10px_30px_rgba(8,61,119,0.08)] transition-shadow duration-300">
 
         <div className="h-[340px] w-full">
 

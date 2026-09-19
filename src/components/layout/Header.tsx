@@ -53,11 +53,11 @@ export function Header({ onMobileMenuClick, isSidebarPinned, setIsSidebarPinned 
   }, []);
 
   return (
-    <header className="flex-none h-[70px] w-full bg-white border-b border-slate-200 flex items-center z-40">
+    <header className="flex-none h-[70px] w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center z-40 transition-colors">
       
       {/* Brand Section (Fixed Width to match sidebar) */}
       <div className={cn(
-        "h-full flex items-center px-6 transition-all duration-300 overflow-hidden shrink-0 border-r border-[#E2E8F0] hidden md:flex",
+        "h-full flex items-center px-6 transition-all duration-300 overflow-hidden shrink-0 border-r border-[#E2E8F0] dark:border-slate-800 hidden md:flex",
         isSidebarPinned ? "w-64" : "w-20 px-0 justify-center"
       )}>
         <div className="flex items-center gap-3">
@@ -66,7 +66,7 @@ export function Header({ onMobileMenuClick, isSidebarPinned, setIsSidebarPinned 
           </div>
           {isSidebarPinned ? (
             <div className="flex items-center gap-2">
-              <span className="text-lg font-bold text-[#173753] tracking-wide whitespace-nowrap">
+              <span className="text-lg font-bold text-[#173753] dark:text-slate-200 tracking-wide whitespace-nowrap">
                 Ledger System
               </span>
               {setIsSidebarPinned && (
@@ -99,13 +99,13 @@ export function Header({ onMobileMenuClick, isSidebarPinned, setIsSidebarPinned 
         {/* Left Actions & Title */}
         <div className="flex items-center gap-4">
           <button 
-            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors rounded-lg md:hidden"
+            className="p-2 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-lg md:hidden"
             onClick={onMobileMenuClick}
           >
             <Menu className="h-5 w-5" />
           </button>
           
-          <h1 className="text-lg font-bold text-[#173753] hidden sm:block">
+          <h1 className="text-lg font-bold text-[#173753] dark:text-slate-200 hidden sm:block">
             {getPageTitle()}
           </h1>
         </div>
@@ -114,16 +114,16 @@ export function Header({ onMobileMenuClick, isSidebarPinned, setIsSidebarPinned 
         <div className="flex items-center gap-4 sm:gap-6">
 
           {/* Date Display */}
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-lg bg-white shadow-sm">
-            <Calendar className="h-4 w-4 text-[#173753]" />
-            <span className="text-xs font-bold text-slate-700">{currentDate}</span>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 shadow-sm transition-colors">
+            <Calendar className="h-4 w-4 text-[#173753] dark:text-slate-300" />
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{currentDate}</span>
           </div>
 
           {/* User Profile */}
           <div className="relative" ref={dropdownRef}>
             <button 
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center gap-3 p-1 rounded-full hover:bg-slate-50 transition-colors group"
+              className="flex items-center gap-3 p-1 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group"
             >
               <div className="h-9 w-9 bg-[#064789] rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm">
                 <User className="w-5 h-5" />
@@ -133,15 +133,15 @@ export function Header({ onMobileMenuClick, isSidebarPinned, setIsSidebarPinned 
 
             {/* Dropdown Menu */}
             {isDropdownOpen && (
-              <div className="absolute right-0 mt-3 w-48 bg-white rounded-xl shadow-lg shadow-slate-200/50 border border-slate-100 overflow-hidden origin-top-right animate-in fade-in zoom-in-95">
-                <div className="p-3 border-b border-slate-100 sm:hidden">
-                  <span className="block text-sm font-bold text-slate-700">Admin</span>
+              <div className="absolute right-0 mt-3 w-48 bg-white dark:bg-slate-900 rounded-xl shadow-lg shadow-slate-200/50 dark:shadow-black/50 border border-slate-100 dark:border-slate-800 overflow-hidden origin-top-right animate-in fade-in zoom-in-95">
+                <div className="p-3 border-b border-slate-100 dark:border-slate-800 sm:hidden">
+                  <span className="block text-sm font-bold text-slate-700 dark:text-slate-300">Admin</span>
                 </div>
                 <div className="p-1">
                   <Link 
                     href="/settings"
                     onClick={() => setIsDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                    className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
                   >
                     <Settings className="h-4 w-4" />
                     <span>Profile Settings</span>
@@ -149,7 +149,7 @@ export function Header({ onMobileMenuClick, isSidebarPinned, setIsSidebarPinned 
                   <Link 
                     href="/login"
                     onClick={() => setIsDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-rose-600 rounded-lg hover:bg-rose-50 transition-colors mt-1"
+                    className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-rose-600 dark:text-rose-500 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors mt-1"
                   >
                     <LogOut className="h-4 w-4" />
                     <span>Sign Out</span>

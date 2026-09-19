@@ -120,13 +120,13 @@ export default function CashReceiptPage(): React.JSX.Element {
      
 
       {/* INPUT FORM SECTION */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-6">
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-6 transition-colors">
         {editingId && (
-          <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs px-4 py-2 rounded-lg flex justify-between items-center font-bold">
+          <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700/50 text-amber-800 dark:text-amber-300 text-xs px-4 py-2 rounded-lg flex justify-between items-center font-bold">
             <span>آپ اینٹری میں تبدیلی (Edit) کر رہے ہیں۔</span>
             <button
               onClick={handleResetForm}
-              className="text-amber-900 underline hover:text-amber-700 text-xs"
+              className="text-amber-900 dark:text-amber-200 underline hover:text-amber-700 dark:hover:text-amber-100 text-xs"
             >
               منسوخ کریں
             </button>
@@ -137,40 +137,40 @@ export default function CashReceiptPage(): React.JSX.Element {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 items-end" dir="rtl">
           {/* Date */}
           <div className="lg:col-span-2">
-            <label className="block text-sm font-bold text-slate-700 mb-2">تاریخ (Date)</label>
+            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">تاریخ (Date)</label>
             <input
               type="date"
               value={date}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDate(e.target.value)}
-              className="w-full p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0e4a86] bg-slate-50 text-sm"
+              className="w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0e4a86] bg-slate-50 dark:bg-slate-700/50 text-slate-900 dark:text-white text-sm"
             />
           </div>
 
           {/* Customer */}
           <div className="lg:col-span-4">
-            <label className="block text-sm font-bold text-slate-700 mb-2">گاہک (Customer)</label>
+            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">گاہک (Customer)</label>
             <div className="flex relative">
               <input
                 type="text"
                 value={selectedCustomer ? `${selectedCustomer.nameUrdu} (${selectedCustomer.code || selectedCustomer.id})` : ""}
                 readOnly
                 placeholder="گاہک منتخب کریں"
-                className="w-full p-2.5 border border-slate-300 rounded-r-lg bg-indigo-50 font-urdu text-sm focus:outline-none cursor-pointer"
+                className="w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-r-lg bg-indigo-50 dark:bg-indigo-900/20 text-slate-900 dark:text-white font-urdu text-sm focus:outline-none cursor-pointer"
                 onClick={() => setIsSearchOpen(true)}
               />
               <button
                 type="button"
                 onClick={() => setIsSearchOpen(true)}
-                className="bg-indigo-100 px-4 border border-r-0 border-slate-300 rounded-l-lg hover:bg-indigo-200 transition-colors cursor-pointer"
+                className="bg-indigo-100 dark:bg-indigo-900/40 px-4 border border-r-0 border-slate-300 dark:border-slate-600 rounded-l-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition-colors cursor-pointer"
               >
-                <Search className="w-4 h-4 text-indigo-700" />
+                <Search className="w-4 h-4 text-indigo-700 dark:text-indigo-400" />
               </button>
             </div>
           </div>
 
           {/* Amount */}
           <div className="lg:col-span-3">
-            <label className="block text-sm font-bold text-slate-700 mb-2">رقم (Amount RS)</label>
+            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">رقم (Amount RS)</label>
             <input
               type="number"
               min="0"
@@ -178,7 +178,7 @@ export default function CashReceiptPage(): React.JSX.Element {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setAmountReceived(e.target.value === "" ? "" : Number(e.target.value))
               }
-              className="w-full p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0e4a86] bg-blue-50 text-base font-bold text-left text-slate-800"
+              className="w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0e4a86] bg-blue-50 dark:bg-blue-900/10 text-base font-bold text-left text-slate-800 dark:text-white"
               dir="ltr"
               placeholder="0"
             />
@@ -186,13 +186,13 @@ export default function CashReceiptPage(): React.JSX.Element {
 
           {/* Description */}
           <div className="lg:col-span-3">
-            <label className="block text-sm font-bold text-slate-700 mb-2">تفصیل (Description)</label>
+            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">تفصیل (Description)</label>
             <input
               type="text"
               value={description}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDescription(e.target.value)}
               placeholder="تفصیل لکھیں..."
-              className="w-full p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0e4a86] text-sm font-urdu bg-slate-50"
+              className="w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0e4a86] text-sm font-urdu bg-slate-50 dark:bg-slate-700/50 text-slate-900 dark:text-white"
             />
           </div>
         </div>
@@ -227,11 +227,11 @@ export default function CashReceiptPage(): React.JSX.Element {
       </div>
 
       {/* ACTION BUTTONS (CANCEL & SAVE/UPDATE) */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-end gap-3 print:hidden">
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex justify-end gap-3 print:hidden transition-colors">
         <button
           type="button"
           onClick={handleResetForm}
-          className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer"
+          className="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 px-6 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer"
         >
           <X className="h-4 w-4" />
           Cancel (منسوخ کریں)
@@ -251,26 +251,26 @@ export default function CashReceiptPage(): React.JSX.Element {
       </div>
 
       {/* SAVED RECEIPTS TABLE SECTION */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-4">
-        <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-          <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-4 transition-colors">
+        <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-4">
+          <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-emerald-500" />
             Saved Receipts Table
-            <span className="font-urdu font-normal text-slate-500 text-sm">(محفوظ شدہ کیش وصولیاں)</span>
+            <span className="font-urdu font-normal text-slate-500 dark:text-slate-400 text-sm">(محفوظ شدہ کیش وصولیاں)</span>
           </h2>
-          <span className="text-xs font-bold bg-slate-100 text-slate-600 px-3 py-1 rounded-full border border-slate-200">
+          <span className="text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-600">
             Total Entries: {recentReceipts.length}
           </span>
         </div>
 
         {recentReceipts.length === 0 ? (
-          <div className="text-center py-12 text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 space-y-2">
-            <Receipt className="w-10 h-10 mx-auto text-slate-300" />
-            <p className="text-sm font-bold text-slate-600">کوئی ریکارڈ محفوظ نہیں ہے</p>
-            <p className="text-xs">اوپر فارم پر گاہک کی تفصیل بھر کر &quot;Save (محفوظ کریں)&quot; دبائیں۔</p>
+          <div className="text-center py-12 text-slate-400 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 space-y-2">
+            <Receipt className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600" />
+            <p className="text-sm font-bold text-slate-600 dark:text-slate-400">کوئی ریکارڈ محفوظ نہیں ہے</p>
+            <p className="text-xs text-slate-500">اوپر فارم پر گاہک کی تفصیل بھر کر &quot;Save (محفوظ کریں)&quot; دبائیں۔</p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-slate-200">
+          <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-[#0e4a86] text-white font-bold uppercase tracking-wider text-[11px]">
@@ -283,37 +283,37 @@ export default function CashReceiptPage(): React.JSX.Element {
                   <th className="p-3.5 text-center w-16">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700 font-medium text-slate-700 dark:text-slate-300">
                 {recentReceipts.map((record, index) => (
                   <tr
                     key={record.id}
                     className={`transition-colors ${
-                      editingId === record.id ? "bg-amber-50/70" : "hover:bg-slate-50"
+                      editingId === record.id ? "bg-amber-50/70 dark:bg-amber-900/20" : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
                     }`}
                   >
-                    <td className="p-3 text-center border-r border-slate-100 font-bold text-slate-400">
+                    <td className="p-3 text-center border-r border-slate-100 dark:border-slate-700 font-bold text-slate-400">
                       {recentReceipts.length - index}
                     </td>
-                    <td className="p-3 border-r border-slate-100 font-mono text-slate-600 font-semibold">
+                    <td className="p-3 border-r border-slate-100 dark:border-slate-700 font-mono text-slate-600 dark:text-slate-400 font-semibold">
                       {record.date}
                     </td>
-                    <td className="p-3 border-r border-slate-100 font-urdu font-bold text-slate-900 text-sm">
+                    <td className="p-3 border-r border-slate-100 dark:border-slate-700 font-urdu font-bold text-slate-900 dark:text-white text-sm">
                       {record.customerNameUrdu} ({record.customerCode})
                     </td>
-                    <td className="p-3 border-r border-slate-100 font-urdu font-medium text-slate-700">
+                    <td className="p-3 border-r border-slate-100 dark:border-slate-700 font-urdu font-medium text-slate-700 dark:text-slate-300">
                       {record.description}
                     </td>
-                    <td className="p-3 border-r border-slate-100 text-right font-mono font-bold text-emerald-600 bg-emerald-50/40">
+                    <td className="p-3 border-r border-slate-100 dark:border-slate-700 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/40 dark:bg-emerald-900/10">
                       RS {record.amount.toLocaleString()}
                     </td>
-                    <td className="p-3 border-r border-slate-100 text-right font-mono font-bold text-slate-800 bg-slate-50/50">
+                    <td className="p-3 border-r border-slate-100 dark:border-slate-700 text-right font-mono font-bold text-slate-800 dark:text-slate-200 bg-slate-50/50 dark:bg-slate-800/50">
                       RS {record.remainingBalance.toLocaleString()}
                     </td>
                     <td className="p-3 text-center">
                       <button
                         type="button"
                         onClick={() => handleEditRecord(record)}
-                        className="text-indigo-600 hover:text-indigo-800 p-1.5 rounded-md hover:bg-indigo-50 transition-colors"
+                        className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 p-1.5 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
                         title="ترمیم کریں (Edit)"
                       >
                         <Edit3 className="h-4 w-4" />
