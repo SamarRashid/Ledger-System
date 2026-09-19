@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Receipt, Search, Save, X, Clock, CheckCircle, RotateCcw, Edit3 } from "lucide-react";
 import { AccountSearchModal, Account } from "@/components/AccountSearchModal";
 
@@ -16,14 +16,14 @@ interface ReceiptRecord {
   remainingBalance: number;
 }
 
-export default function CashReceiptPage() {
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+export default function CashReceiptPage(): React.JSX.Element {
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Account | null>(null);
 
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [amountReceived, setAmountReceived] = useState<number | "">("");
-  const [description, setDescription] = useState("");
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [description, setDescription] = useState<string>("");
+  const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
 
   // Editing State
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -32,12 +32,12 @@ export default function CashReceiptPage() {
   const [recentReceipts, setRecentReceipts] = useState<ReceiptRecord[]>([]);
 
   // Mock balance calculation
-  const currentBalance = selectedCustomer ? 150000 : 0;
-  const received = Number(amountReceived) || 0;
-  const updatedBalance = currentBalance - received;
+  const currentBalance: number = selectedCustomer ? 150000 : 0;
+  const received: number = Number(amountReceived) || 0;
+  const updatedBalance: number = currentBalance - received;
 
   // Form Reset Function
-  const handleResetForm = () => {
+  const handleResetForm = (): void => {
     setSelectedCustomer(null);
     setAmountReceived("");
     setDescription("");
@@ -45,22 +45,22 @@ export default function CashReceiptPage() {
     setEditingId(null);
   };
 
-  // Edit Record Handler
-  const handleEditRecord = (record: ReceiptRecord) => {
+  // Edit Record Handler (Fixed Type Issue)
+  const handleEditRecord = (record: ReceiptRecord): void => {
     setEditingId(record.id);
     setSelectedCustomer({
-      id: record.customerCode,
+      id: record.id, // Number ID passed here instead of string
       code: record.customerCode,
       nameUrdu: record.customerNameUrdu,
       nameEnglish: record.customerNameEnglish,
-    });
+    } as Account);
     setDate(record.date);
     setAmountReceived(record.amount);
     setDescription(record.description);
   };
 
   // Save / Update Record Handler
-  const handleSaveReceipt = () => {
+  const handleSaveReceipt = (): void => {
     if (!selectedCustomer) {
       alert("براہ کرم پہلے گاہک (Customer) منتخب کریں۔");
       return;
@@ -71,6 +71,10 @@ export default function CashReceiptPage() {
       return;
     }
 
+    const customerCode = String(selectedCustomer.code || selectedCustomer.id || "-");
+    const customerNameUrdu = String(selectedCustomer.nameUrdu || "");
+    const customerNameEnglish = String(selectedCustomer.nameEnglish || "");
+
     if (editingId) {
       // Update record
       setRecentReceipts((prev) =>
@@ -79,9 +83,9 @@ export default function CashReceiptPage() {
             ? {
                 ...item,
                 date,
-                customerCode: selectedCustomer.code || "-",
-                customerNameUrdu: selectedCustomer.nameUrdu || "",
-                customerNameEnglish: selectedCustomer.nameEnglish || "",
+                customerCode,
+                customerNameUrdu,
+                customerNameEnglish,
                 amount: Number(amountReceived),
                 description: description || "کیش وصولی",
                 previousBalance: currentBalance,
@@ -95,9 +99,9 @@ export default function CashReceiptPage() {
       const newRecord: ReceiptRecord = {
         id: Date.now(),
         date,
-        customerCode: selectedCustomer.code || "-",
-        customerNameUrdu: selectedCustomer.nameUrdu || "",
-        customerNameEnglish: selectedCustomer.nameEnglish || "",
+        customerCode,
+        customerNameUrdu,
+        customerNameEnglish,
         amount: Number(amountReceived),
         description: description || "کیش وصولی",
         previousBalance: currentBalance,
@@ -113,36 +117,7 @@ export default function CashReceiptPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-24 relative min-h-[calc(100vh-6rem)]">
       {/* HEADER SECTION */}
-      <div className="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 text-start flex items-center gap-2">
-            Cash Receipt <span className="font-urdu font-normal text-slate-600">(کیش وصولی)</span>
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">Receive payment from customers and record entries</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleResetForm}
-            className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Reset Form
-          </button>
-          <div
-            onClick={() => setIsHistoryOpen(true)}
-            className="bg-blue-50 p-2 rounded-lg text-blue-600 cursor-pointer hover:bg-blue-100 transition-colors shadow-sm border border-blue-100 relative"
-            title="Recent Cash Receipts History"
-          >
-            <Receipt className="h-5 w-5" />
-            {recentReceipts.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
-                {recentReceipts.length}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
+     
 
       {/* INPUT FORM SECTION */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-6">
@@ -166,7 +141,7 @@ export default function CashReceiptPage() {
             <input
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDate(e.target.value)}
               className="w-full p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0e4a86] bg-slate-50 text-sm"
             />
           </div>
@@ -177,7 +152,7 @@ export default function CashReceiptPage() {
             <div className="flex relative">
               <input
                 type="text"
-                value={selectedCustomer ? `${selectedCustomer.nameUrdu} (${selectedCustomer.code})` : ""}
+                value={selectedCustomer ? `${selectedCustomer.nameUrdu} (${selectedCustomer.code || selectedCustomer.id})` : ""}
                 readOnly
                 placeholder="گاہک منتخب کریں"
                 className="w-full p-2.5 border border-slate-300 rounded-r-lg bg-indigo-50 font-urdu text-sm focus:outline-none cursor-pointer"
@@ -200,7 +175,9 @@ export default function CashReceiptPage() {
               type="number"
               min="0"
               value={amountReceived}
-              onChange={(e) => setAmountReceived(e.target.value === "" ? "" : Number(e.target.value))}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setAmountReceived(e.target.value === "" ? "" : Number(e.target.value))
+              }
               className="w-full p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0e4a86] bg-blue-50 text-base font-bold text-left text-slate-800"
               dir="ltr"
               placeholder="0"
@@ -213,7 +190,7 @@ export default function CashReceiptPage() {
             <input
               type="text"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDescription(e.target.value)}
               placeholder="تفصیل لکھیں..."
               className="w-full p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0e4a86] text-sm font-urdu bg-slate-50"
             />
@@ -259,7 +236,6 @@ export default function CashReceiptPage() {
           <X className="h-4 w-4" />
           Cancel (منسوخ کریں)
         </button>
-        {/* Profile Circle Icon Color (#0e4a86) used for Save Button */}
         <button
           type="button"
           onClick={handleSaveReceipt}
@@ -297,7 +273,6 @@ export default function CashReceiptPage() {
           <div className="overflow-x-auto rounded-lg border border-slate-200">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                {/* Profile Circle Icon Color (#0e4a86) used for Table Header */}
                 <tr className="bg-[#0e4a86] text-white font-bold uppercase tracking-wider text-[11px]">
                   <th className="p-3.5 border-r border-white/20 text-center w-12">#</th>
                   <th className="p-3.5 border-r border-white/20 w-28">Date (تاریخ)</th>
@@ -356,7 +331,7 @@ export default function CashReceiptPage() {
       <AccountSearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
-        onSelect={(acc) => setSelectedCustomer(acc)}
+        onSelect={(acc: Account) => setSelectedCustomer(acc)}
       />
 
       {/* Recent History Modal */}
