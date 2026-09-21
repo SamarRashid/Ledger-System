@@ -49,8 +49,6 @@ const navLinks = [
     labelUr: "رپورٹس",
     subItems: [
       { href: "/katcha-chitha", icon: ClipboardList, labelEn: "Katcha Chitha", labelUr: "کچا چٹھا" },
-      { href: "/reports/khata-index", icon: FileText, labelEn: "Khata Index", labelUr: "کھاتہ انڈیکس" },
-      { href: "/reports/general-trial", icon: FileText, labelEn: "General Trial List", labelUr: "جنرل ٹرائل لسٹ" },
       { href: "/reports/daily-sale-book", icon: FileText, labelEn: "Daily Sale Book", labelUr: "روزانہ سیل بک" },
       { href: "/reports/daily-supplier-items", icon: FileText, labelEn: "Supplier Items", labelUr: "روزانہ بیوپاری بل کے مطابق اشیاء" },
       { href: "/reports/remaining-cash", icon: CreditCard, labelEn: "Remaining Cash", labelUr: "باقی روکر" },
@@ -58,13 +56,8 @@ const navLinks = [
       { href: "/reports/diary-receipt", icon: Receipt, labelEn: "Diary Receipt", labelUr: "ڈائری رسید" },
       { href: "/reports/my-diary-receipt", icon: Receipt, labelEn: "My Diary Receipt", labelUr: "ڈائری رسید میری" },
       { href: "/reports/sale-bill-copy", icon: FileText, labelEn: "Sale Bill Copy", labelUr: "سیل بل کاپی" },
-      { href: "/reports/customer-khata-receipt", icon: Receipt, labelEn: "Khata Receipt", labelUr: "گاہک کھاتہ رسید" },
-      { href: "/reports/customer-khata", icon: Users, labelEn: "Customer Khata", labelUr: "گاہک کھاتہ" },
       { href: "/reports/general-khata", icon: Users, labelEn: "General Khata", labelUr: "جنرل کھاتہ" },
-      { href: "/reports/joint-supplier-khata", icon: Users, labelEn: "Joint Khata", labelUr: "مشترکہ بیوپاری کھاتہ" },
       { href: "/reports/daily-sale", icon: FileText, labelEn: "Daily Sale", labelUr: "روزانہ کی سیل" },
-      { href: "/reports/receipts-journal", icon: FileText, labelEn: "Receipts Journal", labelUr: "رسیدات روزنامچہ" },
-      { href: "/reports/journal", icon: FileText, labelEn: "Journal", labelUr: "روزنامچہ" },
       { href: "/reports/daily-supplier-bills", icon: FileText, labelEn: "Daily Supplier Bills", labelUr: "بیوپاری روزانہ کے بل" },
       { href: "/reports/beopari-bill", icon: FileText, labelEn: "Supplier Bill", labelUr: "بیوپاری بل" },
     ]
