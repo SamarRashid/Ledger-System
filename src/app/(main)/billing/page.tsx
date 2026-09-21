@@ -120,6 +120,30 @@ export default function BillingPage() {
       alert("Please select a beopari and add at least one item.");
       return;
     }
+
+    // Save to Katcha Chitha records
+    const customer = lineItems[0]?.customer || selectedBeopari;
+    const newRecord = {
+      id: Date.now(),
+      date,
+      customerCode: customer?.code || "-",
+      customerNameUrdu: customer?.nameUrdu || "-",
+      customerNameEnglish: customer?.nameEnglish || "-",
+      transactionType: "receipt",
+      amount: netTotal,
+      description: `بل نمبر: ${billNo}, بیوپاری: ${selectedBeopari.nameUrdu}`
+    };
+
+    const existingStr = localStorage.getItem("katcha_chitha_records");
+    let existing = [];
+    if (existingStr) {
+      try {
+        existing = JSON.parse(existingStr);
+      } catch (e) {}
+    }
+    
+    localStorage.setItem("katcha_chitha_records", JSON.stringify([newRecord, ...existing]));
+
     setShowToast(true);
   };
 

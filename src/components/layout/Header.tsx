@@ -32,6 +32,7 @@ export function Header({ onMobileMenuClick, isSidebarPinned, setIsSidebarPinned 
     if (pathname?.includes('summaries')) return 'Daily Summaries (روزانہ خلاصہ)';
     if (pathname?.includes('item-list')) return 'Item List (فہرست اشیاء)';
     if (pathname?.includes('receipts-payments')) return 'Receipts (رسیدیں)';
+    if (pathname?.includes('katcha-chitha')) return '';
     return 'Ledger System';
   };
 

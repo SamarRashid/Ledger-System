@@ -272,7 +272,7 @@ export default function DashboardPage() {
 
         {/* Item List */}
         <Link
-          href="/item-list"
+          href="/products"
           className="group bg-white dark:bg-slate-800 p-5 lg:p-6 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.06)] dark:shadow-none border border-[#E2E8F0] dark:border-slate-700 hover:border-[#173753]/30 dark:hover:border-slate-500 hover:shadow-[0_12px_30px_rgba(8,61,119,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden min-h-[120px]"
         >
           <div className="absolute top-4 right-4 h-10 w-10 bg-[#173753]/5 dark:bg-slate-700 text-[#2892D7] dark:text-slate-300 rounded-xl flex items-center justify-center shrink-0 z-10 group-hover:scale-110 group-hover:bg-[#173753]/10 transition-all duration-300">

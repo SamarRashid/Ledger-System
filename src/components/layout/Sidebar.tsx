@@ -17,17 +17,18 @@ import {
   User,
   ChevronDown,
   Truck,
-  Package
+  Package,
+  ClipboardList
 } from "lucide-react";
 import { cn } from "@/components/layout/Header";
 
 const navLinks = [
   { href: "/dashboard", icon: LayoutDashboard, labelEn: "Dashboard", labelUr: "ڈیش بورڈ" },
+  { href: "/katcha-chitha", icon: ClipboardList, labelEn: "Katcha Chitha", labelUr: "کچا چٹھا" },
   { href: "/billing", icon: FileText, labelEn: "Billing / Invoice", labelUr: "بیوپاری بل" },
   { href: "/ledger", icon: Users, labelEn: "Customer Ledger", labelUr: "گاہک کھاتہ" },
   { href: "/cash-receipt", icon: Receipt, labelEn: "Cash Receipt", labelUr: "کیش وصولی" },
   { href: "/cash-payment", icon: CreditCard, labelEn: "Cash Payment", labelUr: "نام ادائیگی" },
-  { href: "/item-list", icon: List, labelEn: "Item List", labelUr: "فہرست اشیاء" },
   { href: "/receipts-payments", icon: ArrowLeftRight, labelEn: "Receipts", labelUr: "رسیدیں" },
   { href: "/summaries", icon: PieChart, labelEn: "Daily Summaries", labelUr: "روزانہ خلاصہ" },
   { href: "/settings", icon: Settings, labelEn: "Settings", labelUr: "سیٹنگز" },
