@@ -37,7 +37,7 @@ export default function BillingPage() {
   const [selectedBeopari, setSelectedBeopari] = useState<Account | null>(null);
 
   // Form State
-  const [date, setDate] = useState<string>("2026-09-17");
+  const [date, setDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [billNo, setBillNo] = useState<string>("1001");
   const [copyNo, setCopyNo] = useState<string>("");
   const [gaariNo, setGaariNo] = useState<string>("");
@@ -121,17 +121,40 @@ export default function BillingPage() {
       return;
     }
 
-    // Save to Katcha Chitha records
-    const customer = lineItems[0]?.customer || selectedBeopari;
-    const newRecord = {
-      id: Date.now(),
+    // Group lineItems by customer
+    const customerTotals = new Map<string, { customer: Account | null; amount: number; items: any[] }>();
+    
+    lineItems.forEach(li => {
+      const key = li.customer ? li.customer.code : "UNKNOWN";
+      if (!customerTotals.has(key)) {
+        customerTotals.set(key, { customer: li.customer, amount: 0, items: [] });
+      }
+      customerTotals.get(key)!.amount += li.amount;
+      customerTotals.get(key)!.items.push(li);
+    });
+
+    const newRecords = Array.from(customerTotals.values()).map((ct, idx) => ({
+      id: Date.now() + idx,
       date,
-      customerCode: customer?.code || "-",
-      customerNameUrdu: customer?.nameUrdu || "-",
-      customerNameEnglish: customer?.nameEnglish || "-",
-      transactionType: "receipt",
+      customerCode: ct.customer?.code || "-",
+      customerNameUrdu: ct.customer?.nameUrdu || "نامعلوم (Unknown)",
+      customerNameEnglish: ct.customer?.nameEnglish || "Unknown",
+      transactionType: "receipt", // Debt for buyer
+      amount: ct.amount,
+      items: ct.items,
+      description: `بل نمبر: ${billNo}, اشیاء کی خریداری`
+    }));
+
+    // Beopari (Supplier) gets a payment/credit record
+    const beopariRecord = {
+      id: Date.now() + 1000,
+      date,
+      customerCode: selectedBeopari.code || "-",
+      customerNameUrdu: selectedBeopari.nameUrdu || "-",
+      customerNameEnglish: selectedBeopari.nameEnglish || "-",
+      transactionType: "payment", // We owe money to Beopari
       amount: netTotal,
-      description: `بل نمبر: ${billNo}, بیوپاری: ${selectedBeopari.nameUrdu}`
+      description: `بل نمبر: ${billNo}, خالص بل بیوپاری`
     };
 
     const existingStr = localStorage.getItem("katcha_chitha_records");
@@ -142,7 +165,7 @@ export default function BillingPage() {
       } catch (e) {}
     }
     
-    localStorage.setItem("katcha_chitha_records", JSON.stringify([newRecord, ...existing]));
+    localStorage.setItem("katcha_chitha_records", JSON.stringify([...newRecords, beopariRecord, ...existing]));
 
     setShowToast(true);
   };
@@ -165,7 +188,7 @@ export default function BillingPage() {
         <div className="grid grid-cols-2 gap-4 mb-6 font-bold text-lg">
           <div>
             <p className="mb-2"><strong>خریدار: </strong> {lineItems[0]?.customer ? `${lineItems[0].customer.code} - ${lineItems[0].customer.nameUrdu}` : "__________________"}</p>
-            <p className="mb-2"><strong>تاریخ: </strong> {date}</p>
+            <p className="mb-2"><strong>تاریخ: </strong> <span suppressHydrationWarning>{date}</span></p>
           </div>
           <div>
             <p className="mb-2"><strong>بل نمبر: </strong> {billNo}</p>
@@ -355,7 +378,7 @@ export default function BillingPage() {
             <div className="flex justify-between items-center bg-[#06b6d4]/10 p-1 rounded border border-[#06b6d4]/20 gap-2">
               <div className="flex items-center gap-2 w-1/2">
                 <label className="font-bold text-[#0F172A] whitespace-nowrap">Date (تاریخ)</label>
-                <input type="date" value={date} onChange={e => setDate(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-0.5 text-center bg-white focus:border-[#06b6d4] outline-none flex-1 min-w-0 w-full" />
+                <input type="date" suppressHydrationWarning value={date} onChange={e => setDate(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-0.5 text-center bg-white focus:border-[#06b6d4] outline-none flex-1 min-w-0 w-full" />
               </div>
               <div className="w-1/2 flex items-center gap-2">
                 <label className="font-bold text-[#0F172A] text-left whitespace-nowrap">Bill No (بل نمبر)</label>

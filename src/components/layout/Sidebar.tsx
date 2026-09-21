@@ -48,6 +48,7 @@ const navLinks = [
     labelEn: "Reports",
     labelUr: "رپورٹس",
     subItems: [
+      { href: "/reports/wasoli-report", icon: FileText, labelEn: "Wasoli Report", labelUr: "وصولی رپورٹ" },
       { href: "/katcha-chitha", icon: ClipboardList, labelEn: "Katcha Chitha", labelUr: "کچا چٹھا" },
       { href: "/reports/daily-sale-book", icon: FileText, labelEn: "Daily Sale Book", labelUr: "روزانہ سیل بک" },
       { href: "/reports/daily-supplier-items", icon: FileText, labelEn: "Supplier Items", labelUr: "روزانہ بیوپاری بل کے مطابق اشیاء" },

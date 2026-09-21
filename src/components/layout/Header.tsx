@@ -33,6 +33,7 @@ export function Header({ onMobileMenuClick, isSidebarPinned, setIsSidebarPinned 
     if (pathname?.includes('item-list')) return 'Item List (فہرست اشیاء)';
     if (pathname?.includes('receipts-payments')) return 'Receipts (رسیدیں)';
     if (pathname?.includes('katcha-chitha')) return '';
+    if (pathname?.includes('wasoli-report')) return '';
     return 'Ledger System';
   };
 
@@ -114,11 +115,13 @@ export function Header({ onMobileMenuClick, isSidebarPinned, setIsSidebarPinned 
         {/* Right Actions */}
         <div className="flex items-center gap-4 sm:gap-6">
 
-          {/* Date Display */}
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 shadow-sm transition-colors">
-            <Calendar className="h-4 w-4 text-[#173753] dark:text-slate-300" />
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{currentDate}</span>
-          </div>
+          {/* Date Display (Only on Dashboard) */}
+          {pathname?.includes('dashboard') && (
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 shadow-sm transition-colors">
+              <Calendar className="h-4 w-4 text-[#173753] dark:text-slate-300" />
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{currentDate}</span>
+            </div>
+          )}
 
           {/* User Profile */}
           <div className="relative" ref={dropdownRef}>
