@@ -24,30 +24,51 @@ import { cn } from "@/components/layout/Header";
 
 const navLinks = [
   { href: "/dashboard", icon: LayoutDashboard, labelEn: "Dashboard", labelUr: "ڈیش بورڈ" },
-  { href: "/katcha-chitha", icon: ClipboardList, labelEn: "Katcha Chitha", labelUr: "کچا چٹھا" },
+  { href: "/summaries", icon: PieChart, labelEn: "Daily Summaries", labelUr: "روزانہ خلاصہ" },
   { href: "/billing", icon: FileText, labelEn: "Billing / Invoice", labelUr: "بیوپاری بل" },
   { href: "/ledger", icon: Users, labelEn: "Customer Ledger", labelUr: "گاہک کھاتہ" },
   { href: "/cash-receipt", icon: Receipt, labelEn: "Cash Receipt", labelUr: "کیش وصولی" },
   { href: "/cash-payment", icon: CreditCard, labelEn: "Cash Payment", labelUr: "نام ادائیگی" },
   { href: "/receipts-payments", icon: ArrowLeftRight, labelEn: "Receipts", labelUr: "رسیدیں" },
-  { href: "/summaries", icon: PieChart, labelEn: "Daily Summaries", labelUr: "روزانہ خلاصہ" },
   { href: "/settings", icon: Settings, labelEn: "Settings", labelUr: "سیٹنگز" },
   { 
-  href: "/configurations", 
-  icon: Settings, 
-  labelEn: "Configurations", 
-  labelUr: "کنفیگریشن",
-  subItems: [
-    { 
-  href: "/configration", 
-  icon: Users, 
-  labelEn: "Customers", 
-  labelUr: "کسٹمر" 
-},
-    { href: "/suplier", icon: Truck, labelEn: "Suppliers", labelUr: "سپلائر" },
-    { href: "/products", icon: Package, labelEn: "Products", labelUr: "پروڈکٹس" },
-  ]
-},
+    href: "/configurations", 
+    icon: Settings, 
+    labelEn: "Configurations", 
+    labelUr: "کنفیگریشن",
+    subItems: [
+      { href: "/configration", icon: Users, labelEn: "Customers", labelUr: "کسٹمر" },
+      { href: "/suplier", icon: Truck, labelEn: "Suppliers", labelUr: "سپلائر" },
+      { href: "/products", icon: Package, labelEn: "Products", labelUr: "پروڈکٹس" },
+    ]
+  },
+  {
+    href: "/reports",
+    icon: ClipboardList,
+    labelEn: "Reports",
+    labelUr: "رپورٹس",
+    subItems: [
+      { href: "/katcha-chitha", icon: ClipboardList, labelEn: "Katcha Chitha", labelUr: "کچا چٹھا" },
+      { href: "/reports/khata-index", icon: FileText, labelEn: "Khata Index", labelUr: "کھاتہ انڈیکس" },
+      { href: "/reports/general-trial", icon: FileText, labelEn: "General Trial List", labelUr: "جنرل ٹرائل لسٹ" },
+      { href: "/reports/daily-sale-book", icon: FileText, labelEn: "Daily Sale Book", labelUr: "روزانہ سیل بک" },
+      { href: "/reports/daily-supplier-items", icon: FileText, labelEn: "Supplier Items", labelUr: "روزانہ بیوپاری بل کے مطابق اشیاء" },
+      { href: "/reports/remaining-cash", icon: CreditCard, labelEn: "Remaining Cash", labelUr: "باقی روکر" },
+      { href: "/reports/supplier-bills", icon: FileText, labelEn: "Supplier Bills", labelUr: "بیوپاری کے بل" },
+      { href: "/reports/diary-receipt", icon: Receipt, labelEn: "Diary Receipt", labelUr: "ڈائری رسید" },
+      { href: "/reports/my-diary-receipt", icon: Receipt, labelEn: "My Diary Receipt", labelUr: "ڈائری رسید میری" },
+      { href: "/reports/sale-bill-copy", icon: FileText, labelEn: "Sale Bill Copy", labelUr: "سیل بل کاپی" },
+      { href: "/reports/customer-khata-receipt", icon: Receipt, labelEn: "Khata Receipt", labelUr: "گاہک کھاتہ رسید" },
+      { href: "/reports/customer-khata", icon: Users, labelEn: "Customer Khata", labelUr: "گاہک کھاتہ" },
+      { href: "/reports/general-khata", icon: Users, labelEn: "General Khata", labelUr: "جنرل کھاتہ" },
+      { href: "/reports/joint-supplier-khata", icon: Users, labelEn: "Joint Khata", labelUr: "مشترکہ بیوپاری کھاتہ" },
+      { href: "/reports/daily-sale", icon: FileText, labelEn: "Daily Sale", labelUr: "روزانہ کی سیل" },
+      { href: "/reports/receipts-journal", icon: FileText, labelEn: "Receipts Journal", labelUr: "رسیدات روزنامچہ" },
+      { href: "/reports/journal", icon: FileText, labelEn: "Journal", labelUr: "روزنامچہ" },
+      { href: "/reports/daily-supplier-bills", icon: FileText, labelEn: "Daily Supplier Bills", labelUr: "بیوپاری روزانہ کے بل" },
+      { href: "/reports/beopari-bill", icon: FileText, labelEn: "Supplier Bill", labelUr: "بیوپاری بل" },
+    ]
+  }
 ];
 
 interface SidebarProps {
@@ -61,10 +82,14 @@ export function Sidebar({ isPinned, setIsPinned, isMobileOpen, setIsMobileOpen }
   const pathname = usePathname();
   const [isHovered, setIsHovered] = useState<boolean>(false);
   
-  // State for Configurations Dropdown
-  const [isConfigOpen, setIsConfigOpen] = useState<boolean>(
-    pathname.toLowerCase().includes("configurations")
-  );
+  const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({
+    "/configurations": pathname.toLowerCase().includes("configurations"),
+    "/reports": pathname.toLowerCase().includes("reports") || pathname.toLowerCase().includes("katcha-chitha")
+  });
+
+  const toggleSubmenu = (href: string) => {
+    setOpenSubmenus(prev => ({ ...prev, [href]: !prev[href] }));
+  };
 
   const isExpandedDesktop = isPinned || isHovered;
 
@@ -100,11 +125,12 @@ export function Sidebar({ isPinned, setIsPinned, isMobileOpen, setIsMobileOpen }
 
           // RENDER SUBMODULE / DROPDOWN MENU
           if (hasSubItems) {
+            const isOpen = openSubmenus[link.href];
             return (
               <div key={link.href} className="flex flex-col gap-1">
                 <button
                   type="button"
-                  onClick={() => setIsConfigOpen(!isConfigOpen)}
+                  onClick={() => toggleSubmenu(link.href)}
                   className={cn(
                     "group relative flex items-center h-[46px] rounded-lg transition-all duration-200 cursor-pointer overflow-hidden whitespace-nowrap shrink-0 w-full text-left",
                     isActive ? "bg-white/10 dark:bg-slate-800 text-white font-semibold shadow-md mx-1" : "text-slate-300 hover:bg-slate-800/80 mx-1"
@@ -123,14 +149,14 @@ export function Sidebar({ isPinned, setIsPinned, isMobileOpen, setIsMobileOpen }
                   )}>
                     <div className="flex items-center gap-2">
                       <span className="text-[14px] tracking-wide">{link.labelEn}</span>
-                      <ChevronDown className={cn("h-4 w-4 text-slate-400 transition-transform duration-200", isConfigOpen ? "rotate-180" : "")} />
+                      <ChevronDown className={cn("h-4 w-4 text-slate-400 transition-transform duration-200", isOpen ? "rotate-180" : "")} />
                     </div>
                     <span className={cn("font-urdu text-[12px]", isActive ? "text-[#ffff]" : "text-slate-500")}>{link.labelUr}</span>
                   </div>
                 </button>
 
-                {/* SUBMODULE SUB-ITEMS (CUSTOMER, SUPPLIER, PRODUCTS) */}
-                {isConfigOpen && (isExpandedDesktop || isMobileOpen) && (
+                {/* SUBMODULE SUB-ITEMS */}
+                {isOpen && (isExpandedDesktop || isMobileOpen) && (
                   <div className="flex flex-col gap-1 pl-6 pr-1 border-l-2 border-[#D9F0FF]/20 my-0.5 ml-6">
                     {link.subItems?.map((sub) => {
                       const isSubActive = pathname === sub.href;
