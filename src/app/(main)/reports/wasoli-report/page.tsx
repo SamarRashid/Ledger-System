@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Search, Filter, Phone, Calendar, Users } from "lucide-react";
+import { Search, Filter, Phone, Calendar, Users, Printer, Share2 } from "lucide-react";
 
 interface WasoliRecord {
   id: number;
@@ -33,6 +33,26 @@ const mockData: WasoliRecord[] = [
 export default function WasoliReportPage() {
   const [filter, setFilter] = useState<"all" | "normal" | "3days" | "7days" | "30days">("all");
   const [searchTerm, setSearchTerm] = useState("");
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Wasoli Report',
+          text: 'Check out the Wasoli Report',
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      alert("Sharing is not supported on this device/browser.");
+    }
+  };
 
   const calculateDaysAgo = (dateStr: string) => {
     const pastDate = new Date(dateStr);
@@ -73,9 +93,9 @@ export default function WasoliReportPage() {
   }, [filteredData]);
 
   const getRowColorClass = (daysAgo: number) => {
-    if (daysAgo >= 30) return "bg-red-50/80 hover:bg-red-100 border-l-4 border-l-red-500 dark:bg-red-900/10 dark:hover:bg-red-900/20";
-    if (daysAgo >= 7) return "bg-blue-50/80 hover:bg-blue-100 border-l-4 border-l-blue-500 dark:bg-blue-900/10 dark:hover:bg-blue-900/20";
-    if (daysAgo >= 3) return "bg-green-50/80 hover:bg-green-100 border-l-4 border-l-green-500 dark:bg-green-900/10 dark:hover:bg-green-900/20";
+    if (daysAgo >= 30) return "bg-red-100 hover:bg-red-200 border-l-4 border-l-red-500 dark:bg-red-900/30 dark:hover:bg-red-900/50";
+    if (daysAgo >= 7) return "bg-blue-100 hover:bg-blue-200 border-l-4 border-l-blue-500 dark:bg-blue-900/30 dark:hover:bg-blue-900/50";
+    if (daysAgo >= 3) return "bg-emerald-100 hover:bg-emerald-200 border-l-4 border-l-emerald-500 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50";
     return "hover:bg-slate-50 dark:hover:bg-slate-700/50 border-l-4 border-l-transparent";
   };
 
@@ -90,7 +110,7 @@ export default function WasoliReportPage() {
     <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8 animate-in fade-in duration-500 pb-12">
       
       {/* FILTERS & SEARCH */}
-      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4 mt-2">
+      <div className="print:hidden bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4 mt-2">
         
         {/* Search */}
         <div className="relative w-full md:w-1/3">
@@ -104,38 +124,37 @@ export default function WasoliReportPage() {
           />
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          <Filter className="h-4 w-4 text-slate-400 mr-1" />
-          <button
-            onClick={() => setFilter("all")}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === "all" ? "bg-[#083D77] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"}`}
+        {/* Actions & Filters */}
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-slate-400" />
+            <select 
+              value={filter}
+              onChange={(e) => setFilter(e.target.value as any)}
+              className="bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 text-sm rounded-lg focus:ring-[#083D77] focus:border-[#083D77] p-2"
+            >
+              <option value="all">All (سب)</option>
+              <option value="normal">Normal (نارمل)</option>
+              <option value="3days">3 Days (3 دن)</option>
+              <option value="7days">7 Days (7 دن)</option>
+              <option value="30days">30 Days+ (مزید)</option>
+            </select>
+          </div>
+          
+          <button 
+            onClick={handleShare}
+            className="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 dark:text-indigo-400 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all border border-indigo-200 dark:border-indigo-800"
           >
-            All (سب)
+            <Share2 className="h-4 w-4" />
+            Share
           </button>
-          <button
-            onClick={() => setFilter("normal")}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === "normal" ? "bg-slate-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"}`}
+          
+          <button 
+            onClick={handlePrint}
+            className="bg-[#083D77] hover:bg-[#062c57] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-sm hover:shadow-md"
           >
-            Normal (نارمل)
-          </button>
-          <button
-            onClick={() => setFilter("3days")}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === "3days" ? "bg-green-600 text-white" : "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400"}`}
-          >
-            3 Days (3 دن)
-          </button>
-          <button
-            onClick={() => setFilter("7days")}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === "7days" ? "bg-blue-600 text-white" : "bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400"}`}
-          >
-            7 Days (7 دن)
-          </button>
-          <button
-            onClick={() => setFilter("30days")}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === "30days" ? "bg-red-600 text-white" : "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400"}`}
-          >
-            30 Days+ (مزید)
+            <Printer className="h-4 w-4" />
+            Print
           </button>
         </div>
       </div>
@@ -211,59 +230,61 @@ export default function WasoliReportPage() {
                   <td colSpan={6} className="p-8 text-center text-slate-500 font-urdu border-l-4 border-l-transparent">کوئی ریکارڈ نہیں ملا</td>
                 </tr>
               ) : (
-                Object.keys(groupedData).map((area) => (
-                  <React.Fragment key={area}>
-                    {/* Area Group Header */}
-                    <tr className="bg-[#083D77]/5 dark:bg-slate-700/50 border-y-2 border-slate-300 dark:border-slate-600">
-                      <td colSpan={6} className="p-2 text-center font-urdu text-base text-[#083D77] dark:text-blue-300">
-                        {area}
-                      </td>
-                    </tr>
-                    
-                    {/* Area Records */}
-                    {groupedData[area].map((record) => {
-                      const daysAgo = calculateDaysAgo(record.lastPaymentDate);
-                      return (
-                        <tr key={record.id} className={`transition-colors ${getRowColorClass(daysAgo)}`}>
-                          <td className="p-2 border-l border-slate-200 dark:border-slate-700 text-center">
-                            <span className="bg-slate-800 text-white text-xs px-2 py-0.5 rounded font-mono">{record.accountNo}</span>
-                          </td>
-                          <td className="p-2 border-l border-slate-200 dark:border-slate-700">
-                            <div className="font-urdu text-sm">{record.customerNameUr}</div>
-                          </td>
-                          <td className="p-2 border-l border-slate-200 dark:border-slate-700 text-center font-urdu text-sm">
-                            {record.area}
-                          </td>
-                          <td className="p-2 border-l border-slate-200 dark:border-slate-700 text-center font-mono text-sm">
-                            {record.freshDebt > 0 ? record.freshDebt.toLocaleString() : ""}
-                          </td>
-                          <td className="p-2 border-l border-slate-200 dark:border-slate-700 text-center font-mono text-sm">
-                            {record.freshReceipt > 0 ? record.freshReceipt.toLocaleString() : "0"}
-                          </td>
-                          <td className="p-2 text-center font-mono text-base">
-                            {record.balance.toLocaleString()}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    
-                    {/* Area Totals (Optional) */}
-                    <tr className="bg-slate-50 dark:bg-slate-800 border-y border-slate-300 dark:border-slate-600">
-                      <td colSpan={3} className="p-2 border-l border-slate-200 dark:border-slate-700 text-left font-urdu text-sm text-slate-500">
-                        Total {area}
-                      </td>
-                      <td className="p-2 border-l border-slate-200 dark:border-slate-700 text-center font-mono text-emerald-600 dark:text-emerald-400">
-                        {groupedData[area].reduce((sum, r) => sum + r.freshDebt, 0).toLocaleString()}
-                      </td>
-                      <td className="p-2 border-l border-slate-200 dark:border-slate-700 text-center font-mono text-emerald-600 dark:text-emerald-400">
-                        {groupedData[area].reduce((sum, r) => sum + r.freshReceipt, 0).toLocaleString()}
-                      </td>
-                      <td className="p-2 text-center font-mono text-lg text-[#083D77] dark:text-blue-400">
-                        {groupedData[area].reduce((sum, r) => sum + r.balance, 0).toLocaleString()}
-                      </td>
-                    </tr>
-                  </React.Fragment>
-                ))
+                <>
+                  {Object.keys(groupedData).map((area) => (
+                    <React.Fragment key={area}>
+                      {/* Area Group Header */}
+                      <tr className="bg-[#083D77]/5 dark:bg-slate-700/50 border-y-2 border-slate-300 dark:border-slate-600">
+                        <td colSpan={6} className="p-2 text-center font-urdu text-base text-[#083D77] dark:text-blue-300">
+                          {area}
+                        </td>
+                      </tr>
+                      
+                      {/* Area Records */}
+                      {groupedData[area].map((record) => {
+                        const daysAgo = calculateDaysAgo(record.lastPaymentDate);
+                        return (
+                          <tr key={record.id} className={`transition-colors ${getRowColorClass(daysAgo)}`}>
+                            <td className="p-2 border-l border-slate-200 dark:border-slate-700 text-center">
+                              <span className="bg-slate-800 text-white text-xs px-2 py-0.5 rounded font-mono">{record.accountNo}</span>
+                            </td>
+                            <td className="p-2 border-l border-slate-200 dark:border-slate-700">
+                              <div className="font-urdu text-sm">{record.customerNameUr}</div>
+                            </td>
+                            <td className="p-2 border-l border-slate-200 dark:border-slate-700 text-center font-urdu text-sm">
+                              {record.area}
+                            </td>
+                            <td className="p-2 border-l border-slate-200 dark:border-slate-700 text-center font-mono text-sm">
+                              {record.freshDebt > 0 ? record.freshDebt.toLocaleString() : ""}
+                            </td>
+                            <td className="p-2 border-l border-slate-200 dark:border-slate-700 text-center font-mono text-sm">
+                              {record.freshReceipt > 0 ? record.freshReceipt.toLocaleString() : "0"}
+                            </td>
+                            <td className="p-2 text-center font-mono text-base">
+                              {record.balance.toLocaleString()}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
+                  
+                  {/* GRAND TOTAL ROW */}
+                  <tr className="bg-[#083D77] text-white border-y-4 border-[#083D77]">
+                    <td colSpan={3} className="p-3 border-l border-white/20 text-center font-urdu text-lg font-bold">
+                      کل جمع / بقایا (Grand Total)
+                    </td>
+                    <td className="p-3 border-l border-white/20 text-center font-mono font-bold text-lg">
+                      {filteredData.reduce((sum, r) => sum + r.freshDebt, 0).toLocaleString()}
+                    </td>
+                    <td className="p-3 border-l border-white/20 text-center font-mono font-bold text-lg">
+                      {filteredData.reduce((sum, r) => sum + r.freshReceipt, 0).toLocaleString()}
+                    </td>
+                    <td className="p-3 text-center font-mono font-bold text-xl">
+                      {filteredData.reduce((sum, r) => sum + r.balance, 0).toLocaleString()}
+                    </td>
+                  </tr>
+                </>
               )}
             </tbody>
           </table>

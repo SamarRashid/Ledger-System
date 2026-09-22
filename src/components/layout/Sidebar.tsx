@@ -18,7 +18,8 @@ import {
   ChevronDown,
   Truck,
   Package,
-  ClipboardList
+  ClipboardList,
+  MapPin
 } from "lucide-react";
 import { cn } from "@/components/layout/Header";
 
@@ -37,6 +38,7 @@ const navLinks = [
     labelEn: "Configurations", 
     labelUr: "کنفیگریشن",
     subItems: [
+      { href: "/configration/area", icon: MapPin, labelEn: "Areas", labelUr: "علاقہ جات" },
       { href: "/configration", icon: Users, labelEn: "Customers", labelUr: "کسٹمر" },
       { href: "/suplier", icon: Truck, labelEn: "Suppliers", labelUr: "سپلائر" },
       { href: "/products", icon: Package, labelEn: "Products", labelUr: "پروڈکٹس" },
@@ -48,8 +50,8 @@ const navLinks = [
     labelEn: "Reports",
     labelUr: "رپورٹس",
     subItems: [
-      { href: "/reports/wasoli-report", icon: FileText, labelEn: "Wasoli Report", labelUr: "وصولی رپورٹ" },
-      { href: "/katcha-chitha", icon: ClipboardList, labelEn: "Katcha Chitha", labelUr: "کچا چٹھا" },
+      { href: "/reports/wasoli-report", icon: FileText, labelEn: "Recovery Report", labelUr: "وصولی رپورٹ" },
+      { href: "/katcha-chitha", icon: ClipboardList, labelEn: "Day Book", labelUr: "کچا چٹھا" },
       { href: "/reports/daily-sale-book", icon: FileText, labelEn: "Daily Sale Book", labelUr: "روزانہ سیل بک" },
       { href: "/reports/daily-supplier-items", icon: FileText, labelEn: "Supplier Items", labelUr: "روزانہ بیوپاری بل کے مطابق اشیاء" },
       { href: "/reports/remaining-cash", icon: CreditCard, labelEn: "Remaining Cash", labelUr: "باقی روکر" },
@@ -57,7 +59,7 @@ const navLinks = [
       { href: "/reports/diary-receipt", icon: Receipt, labelEn: "Diary Receipt", labelUr: "ڈائری رسید" },
       { href: "/reports/my-diary-receipt", icon: Receipt, labelEn: "My Diary Receipt", labelUr: "ڈائری رسید میری" },
       { href: "/reports/sale-bill-copy", icon: FileText, labelEn: "Sale Bill Copy", labelUr: "سیل بل کاپی" },
-      { href: "/reports/general-khata", icon: Users, labelEn: "General Khata", labelUr: "جنرل کھاتہ" },
+      { href: "/reports/general-khata", icon: Users, labelEn: "General Ledger", labelUr: "جنرل کھاتہ" },
       { href: "/reports/daily-sale", icon: FileText, labelEn: "Daily Sale", labelUr: "روزانہ کی سیل" },
       { href: "/reports/daily-supplier-bills", icon: FileText, labelEn: "Daily Supplier Bills", labelUr: "بیوپاری روزانہ کے بل" },
       { href: "/reports/beopari-bill", icon: FileText, labelEn: "Supplier Bill", labelUr: "بیوپاری بل" },

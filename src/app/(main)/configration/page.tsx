@@ -20,6 +20,8 @@ export default function CustomerConfigPage(): React.JSX.Element {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [successModalConfig, setSuccessModalConfig] = useState<{ isOpen: boolean; title: string; message: string }>({
     isOpen: false,
     title: "",
@@ -166,11 +168,23 @@ export default function CustomerConfigPage(): React.JSX.Element {
   };
 
   // Delete Customer Function
-  const handleDelete = (id: number): void => {
-    if (confirm("Are you sure you want to delete this customer? (کیا آپ واقعی اس کسٹمر کو ڈیلیٹ کرنا چاہتے ہیں؟)")) {
-      const filtered = customers.filter((c) => c.id !== id);
+  const confirmDelete = (id: number) => {
+    setDeletingId(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDelete = (): void => {
+    if (deletingId) {
+      const filtered = customers.filter((c) => c.id !== deletingId);
       updateStorage(filtered);
-      if (editingId === id) handleCloseModal();
+      if (editingId === deletingId) handleCloseModal();
+      setIsDeleteModalOpen(false);
+      setDeletingId(null);
+      setSuccessModalConfig({ 
+        isOpen: true, 
+        title: "Deleted! (ڈیلیٹ ہو گیا!)", 
+        message: "Customer deleted successfully (کسٹمر کامیابی سے ڈیلیٹ ہو گیا)" 
+      });
     }
   };
 
@@ -185,18 +199,15 @@ export default function CustomerConfigPage(): React.JSX.Element {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-16 p-4">
-      {/* HEADER SECTION */}
+      {/* Search Bar & Add Button */}
       <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4 transition-colors">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <Users className="w-5 h-5 text-[#083D77] dark:text-[#3da0ff]" />
-            Customer Management
-            <span className="font-urdu font-normal text-slate-500 dark:text-slate-400 text-sm">(کسٹمر رجسٹریشن)</span>
-          </h1>
+        <div className="w-full md:w-auto text-slate-800 dark:text-slate-200 font-bold flex items-center gap-2">
+          <UserCheck className="w-5 h-5 text-[#083D77] dark:text-[#3da0ff]" />
+          Customers Directory
         </div>
-
+        
         {/* Search Bar & Add Button */}
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
           <div className="relative flex-1 md:w-64">
             <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400 dark:text-slate-500" />
             <input
@@ -297,9 +308,9 @@ export default function CustomerConfigPage(): React.JSX.Element {
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDelete(cust.id)}
-                          className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
-                          title="Delete"
+                          onClick={() => confirmDelete(cust.id)}
+                          className="text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded-lg transition-colors cursor-pointer"
+                          title="Delete (ڈیلیٹ کریں)"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -476,6 +487,39 @@ export default function CustomerConfigPage(): React.JSX.Element {
           </div>
         </div>
       )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md border border-slate-200 dark:border-slate-800 overflow-hidden text-center p-6 animate-in zoom-in-95 duration-200">
+            <div className="mx-auto w-12 h-12 bg-rose-100 dark:bg-rose-900/30 text-rose-600 rounded-full flex items-center justify-center mb-4">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Delete Customer?</h3>
+            <p className="text-sm text-slate-500 mb-6 font-urdu">
+              Are you sure you want to delete this customer? (کیا آپ واقعی اس کسٹمر کو ڈیلیٹ کرنا چاہتے ہیں؟)
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setDeletingId(null);
+                }}
+                className="px-5 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 dark:text-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition-colors"
+              >
+                Cancel (منسوخ کریں)
+              </button>
+              <button
+                onClick={handleDelete}
+                className="bg-rose-600 hover:bg-rose-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-md"
+              >
+                Yes, Delete (ڈیلیٹ کریں)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -32,8 +32,12 @@ export function Header({ onMobileMenuClick, isSidebarPinned, setIsSidebarPinned 
     if (pathname?.includes('summaries')) return 'Daily Summaries (روزانہ خلاصہ)';
     if (pathname?.includes('item-list')) return 'Item List (فہرست اشیاء)';
     if (pathname?.includes('receipts-payments')) return 'Receipts (رسیدیں)';
-    if (pathname?.includes('katcha-chitha')) return 'Katcha Chitha (کچا چٹھا)';
-    if (pathname?.includes('wasoli-report')) return 'Wasoli Report (وصولی رپورٹ)';
+    if (pathname?.includes('katcha-chitha')) return 'Day Book (کچا چٹھا)';
+    if (pathname?.includes('wasoli-report')) return 'Recovery Report (وصولی رپورٹ)';
+    if (pathname?.includes('configration/area')) return 'Area Management (علاقہ جات)';
+    if (pathname === '/configration' || pathname === '/configration/') return 'Customer Management (گاہک)';
+    if (pathname?.includes('suplier')) return 'Supplier Management (سپلائر)';
+    if (pathname?.includes('products')) return 'Product Management (پروڈکٹس)';
     return 'Ledger System';
   };
 
