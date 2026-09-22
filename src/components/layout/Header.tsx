@@ -32,8 +32,8 @@ export function Header({ onMobileMenuClick, isSidebarPinned, setIsSidebarPinned 
     if (pathname?.includes('summaries')) return 'Daily Summaries (روزانہ خلاصہ)';
     if (pathname?.includes('item-list')) return 'Item List (فہرست اشیاء)';
     if (pathname?.includes('receipts-payments')) return 'Receipts (رسیدیں)';
-    if (pathname?.includes('katcha-chitha')) return '';
-    if (pathname?.includes('wasoli-report')) return '';
+    if (pathname?.includes('katcha-chitha')) return 'Katcha Chitha (کچا چٹھا)';
+    if (pathname?.includes('wasoli-report')) return 'Wasoli Report (وصولی رپورٹ)';
     return 'Ledger System';
   };
 

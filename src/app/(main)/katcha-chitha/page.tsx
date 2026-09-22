@@ -16,6 +16,8 @@ interface KatchaChithaRecord {
   customerNameEnglish: string;
   transactionType: "receipt" | "payment";
   amount: number;
+  commission?: number;
+  netAmount?: number;
   description: string;
   items?: any[];
 }
@@ -50,22 +52,9 @@ export default function KatchaChithaPage(): React.JSX.Element {
     <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8 animate-in fade-in duration-500 pb-12">
       
       {/* HEADER SECTION WITH DATE PICKER */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="h-12 w-12 bg-[#083D77]/10 dark:bg-blue-900/30 text-[#083D77] dark:text-blue-400 rounded-xl flex items-center justify-center shrink-0">
-            <ClipboardList className="h-6 w-6" />
-          </div>
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              Katcha Chitha 
-              <span className="font-urdu text-lg font-medium text-slate-500">(کچا چٹھا)</span>
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Daily Records from Billing Invoices</p>
-          </div>
-        </div>
-
-        <div className="flex items-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 shadow-sm">
-          <div className="flex items-center gap-2 px-2 py-1.5">
+      <div className="flex justify-end mb-4">
+        <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 shadow-sm">
+          <div className="flex items-center gap-2 px-3 py-2">
             <Calendar className="w-4 h-4 text-slate-400" />
             <input
               type="date"
@@ -134,7 +123,7 @@ export default function KatchaChithaPage(): React.JSX.Element {
                 </div>
 
                 {/* Card Body: Items Table (If exists) */}
-                {record.items && record.items.length > 0 ? (
+                {record.items && record.items.length > 0 && (
                   <div className="p-0 overflow-x-auto">
                     <table className="w-full text-sm text-right" dir="rtl">
                       <thead className="bg-[#083D77]/5 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
@@ -160,10 +149,22 @@ export default function KatchaChithaPage(): React.JSX.Element {
                         ))}
                       </tbody>
                     </table>
-                  </div>
-                ) : (
-                  <div className="p-4 text-center text-slate-500 text-sm font-urdu bg-slate-50/30 dark:bg-slate-800/30">
-                    مزید کوئی تفصیل موجود نہیں ہے۔
+                    
+                    {/* Bill Summary Footer */}
+                    <div className="bg-slate-50 dark:bg-slate-800/50 p-4 border-t border-slate-200 dark:border-slate-700 flex flex-col items-end gap-1 font-mono text-sm">
+                      <div className="flex justify-between w-48 text-slate-600 dark:text-slate-400">
+                        <span className="font-urdu font-bold">کل رقم (Gross):</span>
+                        <span>{record.amount.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between w-48 text-slate-600 dark:text-slate-400">
+                        <span className="font-urdu font-bold">کمیشن (Commission):</span>
+                        <span>{(record.commission || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between w-48 pt-2 mt-1 border-t border-slate-200 dark:border-slate-700 font-bold text-base text-slate-900 dark:text-white">
+                        <span className="font-urdu">خالص بل (Net Total):</span>
+                        <span className="text-emerald-600 dark:text-emerald-400">{(record.netAmount || record.amount).toLocaleString()}</span>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

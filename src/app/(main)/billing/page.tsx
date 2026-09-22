@@ -122,14 +122,15 @@ export default function BillingPage() {
     }
 
     // Group lineItems by customer
-    const customerTotals = new Map<string, { customer: Account | null; amount: number; items: any[] }>();
+    const customerTotals = new Map<string, { customer: Account | null; amount: number; commission: number; items: any[] }>();
     
     lineItems.forEach(li => {
       const key = li.customer ? li.customer.code : "UNKNOWN";
       if (!customerTotals.has(key)) {
-        customerTotals.set(key, { customer: li.customer, amount: 0, items: [] });
+        customerTotals.set(key, { customer: li.customer, amount: 0, commission: 0, items: [] });
       }
       customerTotals.get(key)!.amount += li.amount;
+      customerTotals.get(key)!.commission += li.amount * ((Number(li.commissionPct) || 0) / 100);
       customerTotals.get(key)!.items.push(li);
     });
 
@@ -140,7 +141,9 @@ export default function BillingPage() {
       customerNameUrdu: ct.customer?.nameUrdu || "نامعلوم (Unknown)",
       customerNameEnglish: ct.customer?.nameEnglish || "Unknown",
       transactionType: "receipt", // Debt for buyer
-      amount: ct.amount,
+      amount: ct.amount, // Base amount
+      commission: ct.commission,
+      netAmount: ct.amount + ct.commission,
       items: ct.items,
       description: `بل نمبر: ${billNo}, اشیاء کی خریداری`
     }));
