@@ -24,7 +24,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     date: "2026-09-10",
     billNo: "1001",
     description:
-      "دیسی گندم - 12 بوریاں - 150 کلوگرام @ 21 روپے",
+      "دیسی گندم - 12 بوریاں - 150 کلوگرام",
     debit: 3150,
     credit: 0,
   },
@@ -41,7 +41,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     date: "2026-09-15",
     billNo: "1045",
     description:
-      "سپر باسمتی چاول - 50 بوریاں - 2500 کلوگرام @ 150 روپے",
+      "سپر باسمتی چاول - 50 بوریاں - 2500 کلوگرام",
     debit: 375000,
     credit: 0,
   },
@@ -58,7 +58,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     date: "2026-09-17",
     billNo: "1080",
     description:
-      "مکئی - 20 بوریاں - 1000 کلوگرام @ 45 روپے",
+      "مکئی - 20 بوریاں - 1000 کلوگرام",
     debit: 45000,
     credit: 0,
   },
@@ -136,23 +136,6 @@ export default function LedgerPage() {
       {/* Non-printable controls */}
       <div className="print:hidden bg-white dark:bg-slate-800 p-4 md:p-6 rounded-xl shadow-sm border border-[#E2E8F0] dark:border-slate-700 space-y-5 transition-colors">
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[#E2E8F0] dark:border-slate-700 pb-4">
-
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-[#0F172A] dark:text-white text-start flex items-center gap-2">
-              Customer Ledger
-
-              <span className="text-sm font-urdu font-normal text-slate-500">
-                (گاہک کھاتہ)
-              </span>
-            </h1>
-          </div>
-
-          <div className="flex flex-wrap gap-2 w-full md:w-auto">
-            {/* Buttons moved to bottom action bar */}
-          </div>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
 
           {/* From Date */}
@@ -165,7 +148,7 @@ export default function LedgerPage() {
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-2.5 focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4] outline-none bg-[#F8FAFC] dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm"
+              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-3 focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4] outline-none bg-[#F8FAFC] dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm"
             />
           </div>
 
@@ -179,7 +162,7 @@ export default function LedgerPage() {
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-2.5 focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4] outline-none bg-[#F8FAFC] dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm"
+              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-3 focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4] outline-none bg-[#F8FAFC] dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm"
             />
           </div>
 
@@ -191,7 +174,7 @@ export default function LedgerPage() {
 
             <select
               defaultValue="All Groups"
-              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-2.5 focus:border-[#06b6d4] outline-none bg-[#F8FAFC] dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm cursor-pointer"
+              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-3 focus:border-[#06b6d4] outline-none bg-[#F8FAFC] dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm cursor-pointer"
             >
               <option>All Groups</option>
               <option>Group A</option>
@@ -215,11 +198,11 @@ export default function LedgerPage() {
                 }}
                 onFocus={() => setShowAccountDropdown(true)}
                 placeholder="Search account name or code..."
-                className="w-full pl-10 pr-3 py-2.5 border border-[#E2E8F0] dark:border-slate-600 rounded-lg focus:outline-none focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4] bg-[#F8FAFC] dark:bg-slate-700 font-urdu text-[#0F172A] dark:text-white text-sm"
+                className="w-full pl-10 pr-3 py-3 border border-[#E2E8F0] dark:border-slate-600 rounded-lg focus:outline-none focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4] bg-[#F8FAFC] dark:bg-slate-700 font-urdu text-[#0F172A] dark:text-white text-base leading-relaxed"
                 dir="rtl"
               />
 
-              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400 pointer-events-none" />
+              <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
 
               {showAccountDropdown && (
                 <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -268,7 +251,7 @@ export default function LedgerPage() {
               type="text"
               readOnly
               value={customer?.code ?? ""}
-              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-2.5 outline-none bg-slate-50 dark:bg-slate-700 font-bold text-[#06b6d4] text-sm text-center"
+              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-3 outline-none bg-slate-50 dark:bg-slate-700 font-bold text-[#06b6d4] text-sm text-center"
             />
           </div>
 
@@ -280,7 +263,7 @@ export default function LedgerPage() {
 
             <select
               defaultValue="All Vouchers"
-              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-2.5 focus:border-[#06b6d4] outline-none bg-[#F8FAFC] dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm cursor-pointer"
+              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-3 focus:border-[#06b6d4] outline-none bg-[#F8FAFC] dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm cursor-pointer"
             >
               <option>All Vouchers</option>
               <option>Sales (سیلز)</option>
