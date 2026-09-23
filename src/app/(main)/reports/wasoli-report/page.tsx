@@ -32,6 +32,7 @@ const mockData: WasoliRecord[] = [
 
 export default function WasoliReportPage() {
   const [filter, setFilter] = useState<"all" | "normal" | "3days" | "7days" | "30days">("all");
+  const [dateFilter, setDateFilter] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
 
   const handlePrint = () => {
@@ -69,6 +70,11 @@ export default function WasoliReportPage() {
       if (filter === "3days" && (daysAgo < 3 || daysAgo >= 7)) return false;
       if (filter === "7days" && (daysAgo < 7 || daysAgo >= 30)) return false;
       if (filter === "30days" && daysAgo < 30) return false;
+
+      // Filter by explicit Date Picker
+      if (dateFilter && record.lastPaymentDate !== dateFilter) {
+        return false;
+      }
 
       // Filter by search
       const searchStr = searchTerm.toLowerCase();
@@ -109,7 +115,9 @@ export default function WasoliReportPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8 animate-in fade-in duration-500 pb-12">
       
-      {/* FILTERS & SEARCH */}
+      {/* SCREEN UI */}
+      <div className="print:hidden space-y-6">
+        {/* FILTERS & SEARCH */}
       <div className="print:hidden bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4 mt-2">
         
         {/* Search */}
@@ -139,6 +147,16 @@ export default function WasoliReportPage() {
               <option value="7days">7 Days (7 دن)</option>
               <option value="30days">30 Days+ (مزید)</option>
             </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-slate-400" />
+            <input 
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 text-sm rounded-lg focus:ring-[#083D77] focus:border-[#083D77] p-2"
+            />
           </div>
           
           <button 
@@ -289,6 +307,93 @@ export default function WasoliReportPage() {
             </tbody>
           </table>
         </div>
+      </div>
+      </div>
+
+      {/* PRINT UI (Strict Physical Layout) */}
+      <div className="hidden print:block w-full bg-white text-black font-sans pt-4" dir="rtl">
+        
+        {/* Print Header */}
+        <div className="flex justify-between items-end border-b-2 border-black pb-2 mb-4 font-urdu font-bold">
+          <div className="text-sm">Page 1 of 1</div>
+          <div className="text-xl tracking-wide">تازہ خریدار رسید رپورٹ</div>
+          <div className="text-sm font-mono flex gap-2">
+            <span>تاریخ:</span>
+            <span>{new Date().toLocaleDateString('en-GB')}</span>
+          </div>
+        </div>
+
+        {/* Print Table */}
+        <table className="w-full text-right border-collapse text-[13px] border border-black font-urdu">
+          <thead>
+            <tr className="border-b border-black bg-gray-50">
+              <th className="border border-black px-2 py-1 text-center w-16">کھاتہ نمبر</th>
+              <th className="border border-black px-2 py-1 text-center">نام خریدار</th>
+              <th className="border border-black px-2 py-1 text-center">علاقہ / نام</th>
+              <th className="border border-black px-2 py-1 text-center">تازہ نام</th>
+              <th className="border border-black px-2 py-1 text-center">تازہ وصولی</th>
+              <th className="border border-black px-2 py-1 text-center">بقایا بیلنس</th>
+            </tr>
+          </thead>
+          <tbody className="font-medium text-black">
+            {Object.keys(groupedData).length === 0 ? (
+              <tr>
+                <td colSpan={6} className="p-4 text-center border border-black">کوئی ریکارڈ نہیں ملا</td>
+              </tr>
+            ) : (
+              <>
+                {Object.keys(groupedData).map((area) => (
+                  <React.Fragment key={area}>
+                    <tr>
+                      <td colSpan={6} className="border border-black px-2 py-1 text-center font-bold bg-gray-100">
+                        {area}
+                      </td>
+                    </tr>
+                    {groupedData[area].map((record) => (
+                      <tr key={record.id}>
+                        <td className="border border-black px-2 py-1 text-center font-mono font-bold bg-gray-200/50">
+                          {record.accountNo}
+                        </td>
+                        <td className="border border-black px-2 py-1 text-center">
+                          {record.customerNameUr}
+                        </td>
+                        <td className="border border-black px-2 py-1 text-center">
+                          {record.area}
+                        </td>
+                        <td className="border border-black px-2 py-1 text-center font-mono font-bold">
+                          {record.freshDebt > 0 ? record.freshDebt.toLocaleString() : ""}
+                        </td>
+                        <td className="border border-black px-2 py-1 text-center font-mono font-bold">
+                          {record.freshReceipt > 0 ? record.freshReceipt.toLocaleString() : ""}
+                        </td>
+                        <td className="border border-black px-2 py-1 text-center font-mono font-bold">
+                          {record.balance.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                ))}
+                
+                {/* GRAND TOTAL ROW */}
+                <tr className="border-t-[3px] border-black">
+                  <td colSpan={3} className="border border-black px-2 py-1 text-center font-bold text-lg bg-gray-100">
+                    کل جمع / بقایا
+                  </td>
+                  <td className="border border-black px-2 py-1 text-center font-mono font-bold text-lg bg-gray-100">
+                    {filteredData.reduce((sum, r) => sum + r.freshDebt, 0).toLocaleString()}
+                  </td>
+                  <td className="border border-black px-2 py-1 text-center font-mono font-bold text-lg bg-gray-100">
+                    {filteredData.reduce((sum, r) => sum + r.freshReceipt, 0).toLocaleString()}
+                  </td>
+                  <td className="border border-black px-2 py-1 text-center font-mono font-bold text-xl bg-gray-100">
+                    {filteredData.reduce((sum, r) => sum + r.balance, 0).toLocaleString()}
+                  </td>
+                </tr>
+              </>
+            )}
+          </tbody>
+        </table>
+
       </div>
 
     </div>

@@ -6,6 +6,7 @@ import { Plus, Search, Edit2, Trash2, MapPin, X, CheckCircle } from "lucide-reac
 interface Area {
   id: string;
   code: string;
+  postalCode: string;
   nameEn: string;
   nameUr: string;
   city: string;
@@ -28,6 +29,7 @@ export default function AreaConfigPage() {
   // Form State
   const [formData, setFormData] = useState<Partial<Area>>({
     code: "",
+    postalCode: "",
     nameEn: "",
     nameUr: "",
     city: CITIES[0],
@@ -46,6 +48,7 @@ export default function AreaConfigPage() {
         {
           id: "1",
           code: "A-001",
+          postalCode: "54000",
           nameEn: "Main Market",
           nameUr: "مین مارکیٹ",
           city: "Lahore",
@@ -72,6 +75,7 @@ export default function AreaConfigPage() {
       setSelectedArea(null);
       setFormData({
         code: `A-${String(areas.length + 1).padStart(3, "0")}`, // Auto ID
+        postalCode: "",
         nameEn: "",
         nameUr: "",
         city: CITIES[0],
@@ -176,6 +180,7 @@ export default function AreaConfigPage() {
               <tr>
                 <th className="p-4 w-16 text-center">Sr #</th>
                 <th className="p-4">Area Code</th>
+                <th className="p-4">Postal Code</th>
                 <th className="p-4">Area Name <span className="font-urdu text-xs">(علاقہ)</span></th>
                 <th className="p-4">City / Route</th>
                 <th className="p-4 text-center">Status</th>
@@ -195,6 +200,9 @@ export default function AreaConfigPage() {
                     <td className="p-4 text-center font-mono text-slate-400">{index + 1}</td>
                     <td className="p-4 font-mono font-medium text-[#083D77] dark:text-blue-400">
                       {area.code}
+                    </td>
+                    <td className="p-4 font-mono text-slate-500 dark:text-slate-400">
+                      {area.postalCode || "-"}
                     </td>
                     <td className="p-4">
                       <div className="flex flex-col">
@@ -269,7 +277,7 @@ export default function AreaConfigPage() {
             <form onSubmit={handleSubmit} className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 
-                <div className="space-y-1.5 md:col-span-2">
+                <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Area Code</label>
                   <input
                     type="text"
@@ -277,6 +285,17 @@ export default function AreaConfigPage() {
                     value={formData.code}
                     onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                     className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#083D77]/20 focus:border-[#083D77] font-mono text-sm"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Postal Code</label>
+                  <input
+                    type="text"
+                    value={formData.postalCode || ""}
+                    onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#083D77]/20 focus:border-[#083D77] text-sm"
+                    placeholder="e.g. 54000"
                   />
                 </div>
 
