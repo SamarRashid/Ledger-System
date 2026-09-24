@@ -34,25 +34,60 @@ export default function WasoliReportPage() {
   const [filter, setFilter] = useState<"all" | "normal" | "3days" | "7days" | "30days">("all");
   const [dateFilter, setDateFilter] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const handlePrint = () => {
     window.print();
   };
 
   const handleShare = async () => {
-    if (navigator.share) {
+    setIsGeneratingPdf(true);
+    
+    // allow state to update and render the off-screen element
+    setTimeout(async () => {
       try {
-        await navigator.share({
-          title: 'Wasoli Report',
-          text: 'Check out the Wasoli Report',
-          url: window.location.href,
+        const element = document.getElementById("print-report-content");
+        if (!element) return;
+        
+        // Dynamically import to avoid SSR errors
+        const htmlToImage = await import("html-to-image");
+        const jsPDF = (await import("jspdf")).default;
+
+        const imgData = await htmlToImage.toPng(element, {
+          pixelRatio: 2,
         });
+        
+        const pdf = new jsPDF({
+          orientation: "portrait",
+          unit: "mm",
+          format: "a4"
+        });
+        
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (element.offsetHeight * pdfWidth) / element.offsetWidth;
+        
+        pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+        
+        const pdfBlob = pdf.output("blob");
+        const file = new File([pdfBlob], "Wasoli_Report.pdf", { type: "application/pdf" });
+        
+        // Attempt to share the PDF file
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'Wasoli Report',
+            files: [file]
+          });
+        } else {
+          // Fallback if sharing is not supported or declined
+          pdf.save("Wasoli_Report.pdf");
+        }
       } catch (err) {
-        console.error('Error sharing:', err);
+        console.error("Error generating/sharing PDF:", err);
+        alert("Failed to share PDF.");
+      } finally {
+        setIsGeneratingPdf(false);
       }
-    } else {
-      alert("Sharing is not supported on this device/browser.");
-    }
+    }, 300);
   };
 
   const calculateDaysAgo = (dateStr: string) => {
@@ -161,10 +196,11 @@ export default function WasoliReportPage() {
           
           <button 
             onClick={handleShare}
-            className="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 dark:text-indigo-400 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all border border-indigo-200 dark:border-indigo-800"
+            disabled={isGeneratingPdf}
+            className="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 dark:text-indigo-400 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all border border-indigo-200 dark:border-indigo-800 disabled:opacity-50"
           >
             <Share2 className="h-4 w-4" />
-            Share
+            {isGeneratingPdf ? 'Preparing...' : 'Share'}
           </button>
           
           <button 
@@ -311,7 +347,11 @@ export default function WasoliReportPage() {
       </div>
 
       {/* PRINT UI (Strict Physical Layout) */}
-      <div className="hidden print:block w-full bg-white text-black font-sans pt-4" dir="rtl">
+      <div 
+        id="print-report-content"
+        className={`w-full bg-white text-black font-sans pt-4 ${isGeneratingPdf ? 'fixed top-0 left-[-9999px] block z-[-1]' : 'hidden print:block'}`} 
+        dir="rtl"
+      >
         
         {/* Print Header */}
         <div className="flex justify-between items-end border-b-2 border-black pb-2 mb-4 font-urdu font-bold">
