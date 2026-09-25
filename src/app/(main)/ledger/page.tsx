@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Printer, Search, ArrowRight } from "lucide-react";
-import { MOCK_ACCOUNTS } from "@/components/AccountSearchModal";
+import { Account } from "@/components/AccountSearchModal";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface Transaction {
   id: number;
@@ -68,23 +69,55 @@ export default function LedgerPage() {
   const [fromDate, setFromDate] = useState<string>("2026-09-01");
   const [toDate, setToDate] = useState<string>("2026-09-30");
 
-  const [selectedCustomer, setSelectedCustomer] = useState<number>(
-    Number(MOCK_ACCOUNTS[0]?.id)
-  );
-
-  // Only for Account search dropdown
-  const [accountSearch, setAccountSearch] = useState<string>(
-    MOCK_ACCOUNTS[0]
-      ? `${MOCK_ACCOUNTS[0].nameUrdu} (${MOCK_ACCOUNTS[0].code}) - ${MOCK_ACCOUNTS[0].nameEnglish}`
-      : ""
-  );
-  const [showAccountDropdown, setShowAccountDropdown] =
-    useState<boolean>(false);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<string | number>("");
+  const [accountSearch, setAccountSearch] = useState<string>("");
+  const [showAccountDropdown, setShowAccountDropdown] = useState<boolean>(false);
 
   const [printedDate, setPrintedDate] = useState<string>("");
 
   useEffect(() => {
     setPrintedDate(new Date().toLocaleDateString());
+    
+    const fetchAccounts = async () => {
+      try {
+        const [customersRes, suppliersRes] = await Promise.all([
+          fetch(`${API_URL}/api/customers`).catch(() => null),
+          fetch(`${API_URL}/api/suppliers`).catch(() => null)
+        ]);
+
+        const customersData = customersRes ? await customersRes.json() : { data: [] };
+        const suppliersData = suppliersRes ? await suppliersRes.json() : { data: [] };
+
+        const formattedCustomers: Account[] = (customersData.data || []).map((c: any) => ({
+          id: c.id,
+          code: c.code,
+          nameUrdu: c.nameUrdu,
+          marka: "",
+          subGroup: "گاہک",
+          nameEnglish: c.nameEnglish,
+        }));
+
+        const formattedSuppliers: Account[] = (suppliersData.data || []).map((s: any) => ({
+          id: s.id,
+          code: s.code,
+          nameUrdu: s.nameUrdu,
+          marka: "",
+          subGroup: "بیوپاری",
+          nameEnglish: s.nameEnglish,
+        }));
+
+        const allAccounts = [...formattedCustomers, ...formattedSuppliers];
+        setAccounts(allAccounts);
+        if (allAccounts.length > 0) {
+           setSelectedCustomer(allAccounts[0].id);
+           setAccountSearch(`${allAccounts[0].nameUrdu} (${allAccounts[0].code}) - ${allAccounts[0].nameEnglish}`);
+        }
+      } catch (e) {
+         console.error(e);
+      }
+    };
+    fetchAccounts();
   }, []);
 
   const handlePrint = (): void => {
@@ -103,12 +136,12 @@ export default function LedgerPage() {
       };
     });
 
-  const customer = MOCK_ACCOUNTS.find(
-    (account) => Number(account.id) === selectedCustomer
+  const customer = accounts.find(
+    (account) => account.id === selectedCustomer || Number(account.id) === selectedCustomer
   );
 
   // Search account by Urdu name, English name, or code
-  const filteredAccounts = MOCK_ACCOUNTS.filter((account) => {
+  const filteredAccounts = accounts.filter((account) => {
     const search = accountSearch.toLowerCase().trim();
 
     if (!search) return true;
@@ -120,8 +153,8 @@ export default function LedgerPage() {
     );
   });
 
-  const handleAccountSelect = (account: (typeof MOCK_ACCOUNTS)[number]) => {
-    setSelectedCustomer(Number(account.id));
+  const handleAccountSelect = (account: Account) => {
+    setSelectedCustomer(account.id);
 
     setAccountSearch(
       `${account.nameUrdu} (${account.code}) - ${account.nameEnglish}`

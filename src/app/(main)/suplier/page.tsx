@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { Truck, Plus, Search, Edit3, Trash2, Save, X, Building2 } from "lucide-react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 export interface Supplier {
-  id: number;
+  id: string;
   code: string;
   nameUrdu: string;
   nameEnglish: string;
@@ -14,14 +16,12 @@ export interface Supplier {
   status: "Active" | "Inactive";
 }
 
-const STORAGE_KEY = "app_suppliers_list";
-
 export default function SupplierConfigPage(): React.JSX.Element {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [successModalConfig, setSuccessModalConfig] = useState<{ isOpen: boolean; title: string; message: string }>({
     isOpen: false,
     title: "",
@@ -29,7 +29,7 @@ export default function SupplierConfigPage(): React.JSX.Element {
   });
 
   // Form States
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [code, setCode] = useState<string>("");
   const [nameUrdu, setNameUrdu] = useState<string>("");
   const [nameEnglish, setNameEnglish] = useState<string>("");
@@ -38,49 +38,22 @@ export default function SupplierConfigPage(): React.JSX.Element {
   const [openingBalance, setOpeningBalance] = useState<number | "">("");
   const [status, setStatus] = useState<"Active" | "Inactive">("Active");
 
-  // Initial Load from LocalStorage
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        setSuppliers(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse suppliers data", e);
+  // Initial Load from API
+  const loadSuppliers = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/suppliers`);
+      const data = await response.json();
+      if (data.success) {
+        setSuppliers(data.data);
       }
-    } else {
-      // Default Initial Mock Data
-      const defaultData: Supplier[] = [
-        {
-          id: 101,
-          code: "SUP-101",
-          nameUrdu: "میاں ٹریڈرز",
-          nameEnglish: "Mian Traders",
-          phone: "0300-9876543",
-          address: "گوجرانوالہ",
-          openingBalance: 120000,
-          status: "Active",
-        },
-        {
-          id: 102,
-          code: "SUP-102",
-          nameUrdu: "پیکیجز لمیٹڈ",
-          nameEnglish: "Packages Ltd",
-          phone: "0321-1234567",
-          address: "لاہور",
-          openingBalance: 45000,
-          status: "Active",
-        },
-      ];
-      setSuppliers(defaultData);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
+    } catch (e) {
+      console.error("Failed to load suppliers data", e);
     }
-  }, []);
-
-  // Sync with LocalStorage
-  const updateStorage = (updatedList: Supplier[]) => {
-    setSuppliers(updatedList);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
   };
+
+  useEffect(() => {
+    loadSuppliers();
+  }, []);
 
   // Reset Form States
   const handleReset = (): void => {
@@ -96,7 +69,9 @@ export default function SupplierConfigPage(): React.JSX.Element {
 
   // Generate Next Supplier Code
   const generateNextCode = () => {
-    const nextCodeNum = suppliers.length > 0 ? Math.max(...suppliers.map((s) => s.id)) + 1 : 101;
+    const nextCodeNum = suppliers.length > 0 
+      ? Math.max(...suppliers.map((s) => parseInt(s.code.replace('SUP-', '')) || 0)) + 1 
+      : 101;
     return `SUP-${nextCodeNum}`;
   };
 
@@ -113,44 +88,61 @@ export default function SupplierConfigPage(): React.JSX.Element {
     handleReset();
   };
 
-  const handleSaveSupplier = (): void => {
+  const handleSaveSupplier = async (): Promise<void> => {
     if (!nameUrdu.trim() && !nameEnglish.trim()) {
       alert("Please enter the supplier name. (براہ کرم سپلائر کا نام درج کریں۔)");
       return;
     }
 
-    if (editingId) {
-      const updated = suppliers.map((s) =>
-        s.id === editingId
-          ? {
-              ...s,
-              nameUrdu: nameUrdu.trim(),
-              nameEnglish: nameEnglish.trim() || nameUrdu.trim(),
-              phone,
-              address,
-              openingBalance: Number(openingBalance) || 0,
-              status,
-            }
-          : s
-      );
-      updateStorage(updated);
-      setSuccessModalConfig({ isOpen: true, title: "Updated! (اپ ڈیٹ ہو گیا!)", message: "Supplier updated successfully (سپلائر کامیابی سے اپ ڈیٹ ہو گیا)" });
-    } else {
-      const newSupplier: Supplier = {
-        id: Date.now(),
-        code: code || `SUP-${Date.now()}`,
-        nameUrdu: nameUrdu.trim(),
-        nameEnglish: nameEnglish.trim() || nameUrdu.trim(),
-        phone,
-        address,
-        openingBalance: Number(openingBalance) || 0,
-        status,
-      };
-      updateStorage([newSupplier, ...suppliers]);
-      setSuccessModalConfig({ isOpen: true, title: "Added! (شامل ہو گیا!)", message: "Supplier added successfully (سپلائر کامیابی سے شامل ہو گیا)" });
+    try {
+      if (editingId) {
+        const response = await fetch(`${API_URL}/api/suppliers/${editingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code,
+            nameUrdu: nameUrdu.trim(),
+            nameEnglish: nameEnglish.trim() || nameUrdu.trim(),
+            phone,
+            address,
+            openingBalance: Number(openingBalance) || 0,
+            status,
+          })
+        });
+        const data = await response.json();
+        if (data.success) {
+          setSuccessModalConfig({ isOpen: true, title: "Updated! (اپ ڈیٹ ہو گیا!)", message: "Supplier updated successfully (سپلائر کامیابی سے اپ ڈیٹ ہو گیا)" });
+          loadSuppliers();
+        } else {
+          alert(data.message);
+        }
+      } else {
+        const response = await fetch(`${API_URL}/api/suppliers`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code: code || generateNextCode(),
+            nameUrdu: nameUrdu.trim(),
+            nameEnglish: nameEnglish.trim() || nameUrdu.trim(),
+            phone,
+            address,
+            openingBalance: Number(openingBalance) || 0,
+            status,
+          })
+        });
+        const data = await response.json();
+        if (data.success) {
+          setSuccessModalConfig({ isOpen: true, title: "Added! (شامل ہو گیا!)", message: "Supplier added successfully (سپلائر کامیابی سے شامل ہو گیا)" });
+          loadSuppliers();
+        } else {
+          alert(data.message);
+        }
+      }
+      handleCloseModal();
+    } catch (e) {
+      console.error(e);
+      alert("Something went wrong with the API");
     }
-
-    handleCloseModal();
   };
 
   // Open Modal with Selected Supplier Data for Editing
@@ -167,33 +159,45 @@ export default function SupplierConfigPage(): React.JSX.Element {
   };
 
   // Delete Supplier Function
-  const confirmDelete = (id: number) => {
+  const confirmDelete = (id: string) => {
     setDeletingId(id);
     setIsDeleteModalOpen(true);
   };
 
-  const handleDelete = (): void => {
+  const handleDelete = async (): Promise<void> => {
     if (deletingId) {
-      const filtered = suppliers.filter((s) => s.id !== deletingId);
-      updateStorage(filtered);
-      if (editingId === deletingId) handleCloseModal();
-      setIsDeleteModalOpen(false);
-      setDeletingId(null);
-      setSuccessModalConfig({ 
-        isOpen: true, 
-        title: "Deleted! (ڈیلیٹ ہو گیا!)", 
-        message: "Supplier deleted successfully (سپلائر کامیابی سے ڈیلیٹ ہو گیا)" 
-      });
+      try {
+        const response = await fetch(`${API_URL}/api/suppliers/${deletingId}`, {
+          method: "DELETE"
+        });
+        const data = await response.json();
+        if (data.success) {
+          if (editingId === deletingId) handleCloseModal();
+          setIsDeleteModalOpen(false);
+          setDeletingId(null);
+          setSuccessModalConfig({ 
+            isOpen: true, 
+            title: "Deleted! (ڈیلیٹ ہو گیا!)", 
+            message: "Supplier deleted successfully (سپلائر کامیابی سے ڈیلیٹ ہو گیا)" 
+          });
+          loadSuppliers();
+        } else {
+          alert(data.message);
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Failed to delete supplier");
+      }
     }
   };
 
   // Search Filter
   const filteredSuppliers = suppliers.filter(
     (s) =>
-      s.nameUrdu.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.nameEnglish.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.phone.includes(searchQuery)
+      (s.nameUrdu || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (s.nameEnglish || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (s.code || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (s.phone || "").includes(searchQuery)
   );
 
   return (

@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { Package, Plus, Search, Edit3, Trash2, Save, X, Boxes } from "lucide-react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 export interface Product {
-  id: number;
+  id: string;
   code: string;
   nameUrdu: string;
   nameEnglish: string;
@@ -15,14 +17,12 @@ export interface Product {
   status: "Active" | "Inactive";
 }
 
-const STORAGE_KEY = "app_products_list";
-
 export default function ProductConfigPage(): React.JSX.Element {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [successModalConfig, setSuccessModalConfig] = useState<{ isOpen: boolean; title: string; message: string }>({
     isOpen: false,
     title: "",
@@ -30,7 +30,7 @@ export default function ProductConfigPage(): React.JSX.Element {
   });
 
   // Form States
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [code, setCode] = useState<string>("");
   const [nameUrdu, setNameUrdu] = useState<string>("");
   const [nameEnglish, setNameEnglish] = useState<string>("");
@@ -40,51 +40,22 @@ export default function ProductConfigPage(): React.JSX.Element {
   const [unit, setUnit] = useState<string>("Meter");
   const [status, setStatus] = useState<"Active" | "Inactive">("Active");
 
-  // Initial Load from LocalStorage
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        setProducts(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse products data", e);
+  // Initial Load from API
+  const loadProducts = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/products`);
+      const data = await response.json();
+      if (data.success) {
+        setProducts(data.data);
       }
-    } else {
-      // Default Initial Mock Data
-      const defaultData: Product[] = [
-        {
-          id: 101,
-          code: "PRD-101",
-          nameUrdu: "کپاس سوٹ",
-          nameEnglish: "Cotton Suit",
-          category: "Fabric",
-          purchasePrice: 1500,
-          salePrice: 2000,
-          unit: "Meter",
-          status: "Active",
-        },
-        {
-          id: 102,
-          code: "PRD-102",
-          nameUrdu: "واش اینڈ ویئر",
-          nameEnglish: "Wash & Wear",
-          category: "Fabric",
-          purchasePrice: 2200,
-          salePrice: 2800,
-          unit: "Meter",
-          status: "Active",
-        },
-      ];
-      setProducts(defaultData);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
+    } catch (e) {
+      console.error("Failed to load products data", e);
     }
-  }, []);
-
-  // Sync with LocalStorage
-  const updateStorage = (updatedList: Product[]) => {
-    setProducts(updatedList);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
   };
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
 
   // Reset Form States
   const handleReset = (): void => {
@@ -101,7 +72,9 @@ export default function ProductConfigPage(): React.JSX.Element {
 
   // Generate Next Product Code
   const generateNextCode = () => {
-    const nextCodeNum = products.length > 0 ? Math.max(...products.map((p) => p.id)) + 1 : 101;
+    const nextCodeNum = products.length > 0 
+      ? Math.max(...products.map((p) => parseInt(p.code.replace('PRD-', '')) || 0)) + 1 
+      : 101;
     return `PRD-${nextCodeNum}`;
   };
 
@@ -118,46 +91,63 @@ export default function ProductConfigPage(): React.JSX.Element {
     handleReset();
   };
 
-  const handleSaveProduct = (): void => {
+  const handleSaveProduct = async (): Promise<void> => {
     if (!nameUrdu.trim() && !nameEnglish.trim()) {
       alert("Please enter the product name. (براہ کرم پروڈکٹ کا نام درج کریں۔)");
       return;
     }
 
-    if (editingId) {
-      const updated = products.map((p) =>
-        p.id === editingId
-          ? {
-              ...p,
-              nameUrdu: nameUrdu.trim(),
-              nameEnglish: nameEnglish.trim() || nameUrdu.trim(),
-              category,
-              purchasePrice: Number(purchasePrice) || 0,
-              salePrice: Number(salePrice) || 0,
-              unit,
-              status,
-            }
-          : p
-      );
-      updateStorage(updated);
-      setSuccessModalConfig({ isOpen: true, title: "Updated! (اپ ڈیٹ ہو گیا!)", message: "Product updated successfully (پروڈکٹ کامیابی سے اپ ڈیٹ ہو گیا)" });
-    } else {
-      const newProduct: Product = {
-        id: Date.now(),
-        code: code || `PRD-${Date.now()}`,
-        nameUrdu: nameUrdu.trim(),
-        nameEnglish: nameEnglish.trim() || nameUrdu.trim(),
-        category,
-        purchasePrice: Number(purchasePrice) || 0,
-        salePrice: Number(salePrice) || 0,
-        unit,
-        status,
-      };
-      updateStorage([newProduct, ...products]);
-      setSuccessModalConfig({ isOpen: true, title: "Added! (شامل ہو گیا!)", message: "Product added successfully (پروڈکٹ کامیابی سے شامل ہو گیا)" });
+    try {
+      if (editingId) {
+        const response = await fetch(`${API_URL}/api/products/${editingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code,
+            nameUrdu: nameUrdu.trim(),
+            nameEnglish: nameEnglish.trim() || nameUrdu.trim(),
+            category,
+            purchasePrice: Number(purchasePrice) || 0,
+            salePrice: Number(salePrice) || 0,
+            unit,
+            status,
+          })
+        });
+        const data = await response.json();
+        if (data.success) {
+          setSuccessModalConfig({ isOpen: true, title: "Updated! (اپ ڈیٹ ہو گیا!)", message: "Product updated successfully (پروڈکٹ کامیابی سے اپ ڈیٹ ہو گیا)" });
+          loadProducts();
+        } else {
+          alert(data.message);
+        }
+      } else {
+        const response = await fetch(`${API_URL}/api/products`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code: code || generateNextCode(),
+            nameUrdu: nameUrdu.trim(),
+            nameEnglish: nameEnglish.trim() || nameUrdu.trim(),
+            category,
+            purchasePrice: Number(purchasePrice) || 0,
+            salePrice: Number(salePrice) || 0,
+            unit,
+            status,
+          })
+        });
+        const data = await response.json();
+        if (data.success) {
+          setSuccessModalConfig({ isOpen: true, title: "Added! (شامل ہو گیا!)", message: "Product added successfully (پروڈکٹ کامیابی سے شامل ہو گیا)" });
+          loadProducts();
+        } else {
+          alert(data.message);
+        }
+      }
+      handleCloseModal();
+    } catch (e) {
+      console.error(e);
+      alert("Something went wrong with the API");
     }
-
-    handleCloseModal();
   };
 
   // Open Modal with Selected Product Data for Editing
@@ -175,33 +165,45 @@ export default function ProductConfigPage(): React.JSX.Element {
   };
 
   // Delete Product Function
-  const confirmDelete = (id: number) => {
+  const confirmDelete = (id: string) => {
     setDeletingId(id);
     setIsDeleteModalOpen(true);
   };
 
-  const handleDelete = (): void => {
+  const handleDelete = async (): Promise<void> => {
     if (deletingId) {
-      const filtered = products.filter((p) => p.id !== deletingId);
-      updateStorage(filtered);
-      if (editingId === deletingId) handleCloseModal();
-      setIsDeleteModalOpen(false);
-      setDeletingId(null);
-      setSuccessModalConfig({ 
-        isOpen: true, 
-        title: "Deleted! (ڈیلیٹ ہو گیا!)", 
-        message: "Product deleted successfully (پروڈکٹ کامیابی سے ڈیلیٹ ہو گیا)" 
-      });
+      try {
+        const response = await fetch(`${API_URL}/api/products/${deletingId}`, {
+          method: "DELETE"
+        });
+        const data = await response.json();
+        if (data.success) {
+          if (editingId === deletingId) handleCloseModal();
+          setIsDeleteModalOpen(false);
+          setDeletingId(null);
+          setSuccessModalConfig({ 
+            isOpen: true, 
+            title: "Deleted! (ڈیلیٹ ہو گیا!)", 
+            message: "Product deleted successfully (پروڈکٹ کامیابی سے ڈیلیٹ ہو گیا)" 
+          });
+          loadProducts();
+        } else {
+          alert(data.message);
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Failed to delete product");
+      }
     }
   };
 
   // Search Filter
   const filteredProducts = products.filter(
     (p) =>
-      p.nameUrdu.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.nameEnglish.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.category.toLowerCase().includes(searchQuery.toLowerCase())
+      (p.nameUrdu || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.nameEnglish || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.code || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.category || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (

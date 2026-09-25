@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { Users, Plus, Search, Edit3, Trash2, Save, X, UserCheck } from "lucide-react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 export interface Customer {
-  id: number;
+  id: string;
   code: string;
   nameUrdu: string;
   nameEnglish: string;
@@ -14,14 +16,12 @@ export interface Customer {
   status: "Active" | "Inactive";
 }
 
-const STORAGE_KEY = "app_customers_list";
-
 export default function CustomerConfigPage(): React.JSX.Element {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [successModalConfig, setSuccessModalConfig] = useState<{ isOpen: boolean; title: string; message: string }>({
     isOpen: false,
     title: "",
@@ -29,7 +29,7 @@ export default function CustomerConfigPage(): React.JSX.Element {
   });
 
   // Form States
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [code, setCode] = useState<string>("");
   const [nameUrdu, setNameUrdu] = useState<string>("");
   const [nameEnglish, setNameEnglish] = useState<string>("");
@@ -38,49 +38,22 @@ export default function CustomerConfigPage(): React.JSX.Element {
   const [openingBalance, setOpeningBalance] = useState<number | "">("");
   const [status, setStatus] = useState<"Active" | "Inactive">("Active");
 
-  // Initial Load from LocalStorage
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        setCustomers(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse customers data", e);
+  // Initial Load from API
+  const loadCustomers = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/customers`);
+      const data = await response.json();
+      if (data.success) {
+        setCustomers(data.data);
       }
-    } else {
-      // Default Initial Mock Data
-      const defaultData: Customer[] = [
-        {
-          id: 101,
-          code: "CST-101",
-          nameUrdu: "احمد ٹریڈرز",
-          nameEnglish: "Ahmad Traders",
-          phone: "0300-1234567",
-          address: "فیصل آباد",
-          openingBalance: 50000,
-          status: "Active",
-        },
-        {
-          id: 102,
-          code: "CST-102",
-          nameUrdu: "علی کلاتھ ہاؤس",
-          nameEnglish: "Ali Cloth House",
-          phone: "0321-7654321",
-          address: "لاہور",
-          openingBalance: 25000,
-          status: "Active",
-        },
-      ];
-      setCustomers(defaultData);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
+    } catch (e) {
+      console.error("Failed to load customers data", e);
     }
-  }, []);
-
-  // Sync with LocalStorage
-  const updateStorage = (updatedList: Customer[]) => {
-    setCustomers(updatedList);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
   };
+
+  useEffect(() => {
+    loadCustomers();
+  }, []);
 
   // Reset Form States
   const handleReset = (): void => {
@@ -96,7 +69,9 @@ export default function CustomerConfigPage(): React.JSX.Element {
 
   // Generate Next Customer Code
   const generateNextCode = () => {
-    const nextCodeNum = customers.length > 0 ? Math.max(...customers.map((c) => c.id)) + 1 : 101;
+    const nextCodeNum = customers.length > 0 
+      ? Math.max(...customers.map((c) => parseInt(c.code.replace('CST-', '')) || 0)) + 1 
+      : 101;
     return `CST-${nextCodeNum}`;
   };
 
@@ -114,44 +89,61 @@ export default function CustomerConfigPage(): React.JSX.Element {
   };
 
   // Add or Update Customer Function
-  const handleSaveCustomer = (): void => {
+  const handleSaveCustomer = async (): Promise<void> => {
     if (!nameUrdu.trim() && !nameEnglish.trim()) {
       alert("Please enter the customer name. (براہ کرم کسٹمر کا نام درج کریں۔)");
       return;
     }
 
-    if (editingId) {
-      const updated = customers.map((c) =>
-        c.id === editingId
-          ? {
-              ...c,
-              nameUrdu: nameUrdu.trim(),
-              nameEnglish: nameEnglish.trim() || nameUrdu.trim(),
-              phone,
-              address,
-              openingBalance: Number(openingBalance) || 0,
-              status,
-            }
-          : c
-      );
-      updateStorage(updated);
-      setSuccessModalConfig({ isOpen: true, title: "Updated! (اپ ڈیٹ ہو گیا!)", message: "Customer updated successfully (کسٹمر کامیابی سے اپ ڈیٹ ہو گیا)" });
-    } else {
-      const newCustomer: Customer = {
-        id: Date.now(),
-        code: code || `CST-${Date.now()}`,
-        nameUrdu: nameUrdu.trim(),
-        nameEnglish: nameEnglish.trim() || nameUrdu.trim(),
-        phone,
-        address,
-        openingBalance: Number(openingBalance) || 0,
-        status,
-      };
-      updateStorage([newCustomer, ...customers]);
-      setSuccessModalConfig({ isOpen: true, title: "Added! (شامل ہو گیا!)", message: "Customer added successfully (کسٹمر کامیابی سے شامل ہو گیا)" });
+    try {
+      if (editingId) {
+        const response = await fetch(`${API_URL}/api/customers/${editingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code,
+            nameUrdu: nameUrdu.trim(),
+            nameEnglish: nameEnglish.trim() || nameUrdu.trim(),
+            phone,
+            address,
+            openingBalance: Number(openingBalance) || 0,
+            status,
+          })
+        });
+        const data = await response.json();
+        if (data.success) {
+          setSuccessModalConfig({ isOpen: true, title: "Updated! (اپ ڈیٹ ہو گیا!)", message: "Customer updated successfully (کسٹمر کامیابی سے اپ ڈیٹ ہو گیا)" });
+          loadCustomers();
+        } else {
+          alert(data.message);
+        }
+      } else {
+        const response = await fetch(`${API_URL}/api/customers`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code: code || generateNextCode(),
+            nameUrdu: nameUrdu.trim(),
+            nameEnglish: nameEnglish.trim() || nameUrdu.trim(),
+            phone,
+            address,
+            openingBalance: Number(openingBalance) || 0,
+            status,
+          })
+        });
+        const data = await response.json();
+        if (data.success) {
+          setSuccessModalConfig({ isOpen: true, title: "Added! (شامل ہو گیا!)", message: "Customer added successfully (کسٹمر کامیابی سے شامل ہو گیا)" });
+          loadCustomers();
+        } else {
+          alert(data.message);
+        }
+      }
+      handleCloseModal();
+    } catch (e) {
+      console.error(e);
+      alert("Something went wrong with the API");
     }
-
-    handleCloseModal();
   };
 
   // Open Modal with Selected Customer Data for Editing
@@ -168,33 +160,45 @@ export default function CustomerConfigPage(): React.JSX.Element {
   };
 
   // Delete Customer Function
-  const confirmDelete = (id: number) => {
+  const confirmDelete = (id: string) => {
     setDeletingId(id);
     setIsDeleteModalOpen(true);
   };
 
-  const handleDelete = (): void => {
+  const handleDelete = async (): Promise<void> => {
     if (deletingId) {
-      const filtered = customers.filter((c) => c.id !== deletingId);
-      updateStorage(filtered);
-      if (editingId === deletingId) handleCloseModal();
-      setIsDeleteModalOpen(false);
-      setDeletingId(null);
-      setSuccessModalConfig({ 
-        isOpen: true, 
-        title: "Deleted! (ڈیلیٹ ہو گیا!)", 
-        message: "Customer deleted successfully (کسٹمر کامیابی سے ڈیلیٹ ہو گیا)" 
-      });
+      try {
+        const response = await fetch(`${API_URL}/api/customers/${deletingId}`, {
+          method: "DELETE"
+        });
+        const data = await response.json();
+        if (data.success) {
+          if (editingId === deletingId) handleCloseModal();
+          setIsDeleteModalOpen(false);
+          setDeletingId(null);
+          setSuccessModalConfig({ 
+            isOpen: true, 
+            title: "Deleted! (ڈیلیٹ ہو گیا!)", 
+            message: "Customer deleted successfully (کسٹمر کامیابی سے ڈیلیٹ ہو گیا)" 
+          });
+          loadCustomers();
+        } else {
+          alert(data.message);
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Failed to delete customer");
+      }
     }
   };
 
   // Search Filter
   const filteredCustomers = customers.filter(
     (c) =>
-      c.nameUrdu.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.nameEnglish.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone.includes(searchQuery)
+      (c.nameUrdu || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.nameEnglish || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.code || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.phone || "").includes(searchQuery)
   );
 
   return (

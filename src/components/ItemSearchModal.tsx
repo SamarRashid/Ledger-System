@@ -4,21 +4,15 @@ import { useEffect, useState } from "react";
 import { Search, X } from "lucide-react";
 
 export interface Item {
-  id: number;
+  id: string | number;
   code: string;
   nameUrdu: string;
   nameEnglish: string;
 }
 
-export const MOCK_ITEMS: Item[] = [
-  { id: 1, code: "I-001", nameUrdu: "دیسی گندم", nameEnglish: "Desi Ghandum" },
-  { id: 2, code: "I-002", nameUrdu: "چاول", nameEnglish: "Rice" },
-  { id: 3, code: "I-003", nameUrdu: "چنا", nameEnglish: "Chana" },
-  { id: 4, code: "I-004", nameUrdu: "مونگ پھلی", nameEnglish: "Peanut" },
-  { id: 5, code: "I-005", nameUrdu: "کپاس", nameEnglish: "Cotton" },
-  { id: 6, code: "I-006", nameUrdu: "باجرہ", nameEnglish: "Millet" },
-  { id: 7, code: "I-007", nameUrdu: "مکئی", nameEnglish: "Corn" },
-];
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+// MOCK_ITEMS removed as we will fetch dynamically from backend products
 
 interface Props {
   isOpen: boolean;
@@ -29,13 +23,36 @@ interface Props {
 export function ItemSearchModal({ isOpen, onClose, onSelect }: Props) {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const [items, setItems] = useState<Item[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (isOpen) {
       setSearchTerm("");
       setSelectedIndex(0);
+      loadItems();
     }
   }, [isOpen]);
+
+  const loadItems = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/products`);
+      const data = await res.json();
+      if (data.success) {
+        setItems(data.data.map((p: any) => ({
+          id: p.id,
+          code: p.code,
+          nameUrdu: p.nameUrdu,
+          nameEnglish: p.nameEnglish
+        })));
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -47,14 +64,14 @@ export function ItemSearchModal({ isOpen, onClose, onSelect }: Props) {
 
   if (!isOpen) return null;
 
-  const filteredItems = MOCK_ITEMS.filter((itm) => {
+  const filteredItems = items.filter((itm) => {
     const searchLower = searchTerm.trim().toLowerCase();
     if (!searchLower) return true;
 
     return (
-      itm.code.toLowerCase().includes(searchLower) ||
-      itm.nameEnglish.toLowerCase().includes(searchLower) ||
-      itm.nameUrdu.includes(searchTerm.trim())
+      (itm.code || "").toLowerCase().includes(searchLower) ||
+      (itm.nameEnglish || "").toLowerCase().includes(searchLower) ||
+      (itm.nameUrdu || "").includes(searchTerm.trim())
     );
   });
 
@@ -152,7 +169,13 @@ export function ItemSearchModal({ isOpen, onClose, onSelect }: Props) {
                   <td className="p-3 font-semibold text-slate-700 whitespace-normal break-words">{itm.nameEnglish}</td>
                 </tr>
               ))}
-              {filteredItems.length === 0 && (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={3} className="p-10 text-center text-slate-500 font-medium">
+                    Loading items...
+                  </td>
+                </tr>
+              ) : filteredItems.length === 0 ? (
                 <tr>
                   <td colSpan={3} className="p-10 text-center text-slate-500">
                     <div className="flex flex-col items-center gap-2">
@@ -161,7 +184,7 @@ export function ItemSearchModal({ isOpen, onClose, onSelect }: Props) {
                     </div>
                   </td>
                 </tr>
-              )}
+              ) : null}
             </tbody>
           </table>
         </div>

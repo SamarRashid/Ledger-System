@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Search, X } from "lucide-react";
 
 export interface Account {
-  id: number;
+  id: string | number;
   code: string;
   nameUrdu: string;
   marka: string;
@@ -12,107 +12,9 @@ export interface Account {
   nameEnglish: string;
 }
 
-// Mock Accounts
-export const MOCK_ACCOUNTS: Account[] = [
-  {
-    id: 6,
-    code: "101",
-    nameUrdu: "انیس",
-    marka: "",
-    subGroup: "گاہک",
-    nameEnglish: "ANEES",
-  },
-  {
-    id: 7,
-    code: "102",
-    nameUrdu: "زنیر",
-    marka: "",
-    subGroup: "گاہک",
-    nameEnglish: "ZUNAIR",
-  },
-  {
-    id: 8,
-    code: "103",
-    nameUrdu: "نعمان",
-    marka: "",
-    subGroup: "گاہک",
-    nameEnglish: "NUMAN",
-  },
-  {
-    id: 9,
-    code: "104",
-    nameUrdu: "حسن",
-    marka: "",
-    subGroup: "گاہک",
-    nameEnglish: "HASSAN",
-  },
-  {
-    id: 10,
-    code: "105",
-    nameUrdu: "ثمر",
-    marka: "",
-    subGroup: "گاہک",
-    nameEnglish: "SAMAR",
-  },
-  {
-    id: 11,
-    code: "106",
-    nameUrdu: "عائشہ",
-    marka: "",
-    subGroup: "گاہک",
-    nameEnglish: "AYESHA",
-  },
-  {
-    id: 12,
-    code: "107",
-    nameUrdu: "فاطمہ",
-    marka: "",
-    subGroup: "گاہک",
-    nameEnglish: "FATIMA",
-  },
-  {
-    id: 13,
-    code: "108",
-    nameUrdu: "طیبہ",
-    marka: "",
-    subGroup: "گاہک",
-    nameEnglish: "TAYABA",
-  },
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-  // Beopari / Merchant
-  {
-    id: 101,
-    code: "201",
-    nameUrdu: "احمد",
-    marka: "",
-    subGroup: "بیوپاری",
-    nameEnglish: "AHMAD",
-  },
-  {
-    id: 102,
-    code: "202",
-    nameUrdu: "عمران",
-    marka: "",
-    subGroup: "بیوپاری",
-    nameEnglish: "IMRAN",
-  },
-  {
-    id: 103,
-    code: "203",
-    nameUrdu: "کاشف",
-    marka: "",
-    subGroup: "بیوپاری",
-    nameEnglish: "KASHIF",
-  },
-  {
-    id: 104,
-    code: "204",
-    nameUrdu: "زاہد",
-    marka: "",
-    subGroup: "بیوپاری",
-    nameEnglish: "ZAHID",
-  },
-];
+// MOCK_ACCOUNTS removed as we will fetch dynamically
 
 interface Props {
   isOpen: boolean;
@@ -129,14 +31,54 @@ export function AccountSearchModal({
 }: Props) {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Modal open hone par purani search clear
+  // Modal open hone par purani search clear aur data load
   useEffect(() => {
     if (isOpen) {
       setSearchTerm("");
       setSelectedIndex(0);
+      loadAccounts();
     }
   }, [isOpen]);
+
+  const loadAccounts = async () => {
+    setIsLoading(true);
+    try {
+      const [customersRes, suppliersRes] = await Promise.all([
+        fetch(`${API_URL}/api/customers`).catch(() => null),
+        fetch(`${API_URL}/api/suppliers`).catch(() => null)
+      ]);
+
+      const customersData = customersRes ? await customersRes.json() : { data: [] };
+      const suppliersData = suppliersRes ? await suppliersRes.json() : { data: [] };
+
+      const formattedCustomers: Account[] = (customersData.data || []).map((c: any) => ({
+        id: c.id,
+        code: c.code,
+        nameUrdu: c.nameUrdu,
+        marka: "",
+        subGroup: "گاہک",
+        nameEnglish: c.nameEnglish,
+      }));
+
+      const formattedSuppliers: Account[] = (suppliersData.data || []).map((s: any) => ({
+        id: s.id,
+        code: s.code,
+        nameUrdu: s.nameUrdu,
+        marka: "",
+        subGroup: "بیوپاری",
+        nameEnglish: s.nameEnglish,
+      }));
+
+      setAccounts([...formattedCustomers, ...formattedSuppliers]);
+    } catch (e) {
+      console.error("Failed to load accounts", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -148,7 +90,7 @@ export function AccountSearchModal({
 
   if (!isOpen) return null;
 
-  const filteredAccounts = MOCK_ACCOUNTS.filter((acc) => {
+  const filteredAccounts = accounts.filter((acc) => {
     // Customer / Beopari filter
     if (typeFilter && acc.subGroup !== typeFilter) {
       return false;
@@ -162,10 +104,10 @@ export function AccountSearchModal({
     }
 
     return (
-      acc.code.toLowerCase().includes(searchLower) ||
-      acc.nameEnglish.toLowerCase().includes(searchLower) ||
-      acc.nameUrdu.includes(searchTerm.trim()) ||
-      acc.marka.toLowerCase().includes(searchLower)
+      (acc.code || "").toLowerCase().includes(searchLower) ||
+      (acc.nameEnglish || "").toLowerCase().includes(searchLower) ||
+      (acc.nameUrdu || "").includes(searchTerm.trim()) ||
+      (acc.marka || "").toLowerCase().includes(searchLower)
     );
   });
 
@@ -321,7 +263,13 @@ export function AccountSearchModal({
                 </tr>
               ))}
 
-              {filteredAccounts.length === 0 && (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={5} className="p-10 text-center text-slate-500 font-medium">
+                    Loading accounts...
+                  </td>
+                </tr>
+              ) : filteredAccounts.length === 0 ? (
                 <tr>
                   <td
                     colSpan={5}
@@ -340,7 +288,7 @@ export function AccountSearchModal({
                     </div>
                   </td>
                 </tr>
-              )}
+              ) : null}
             </tbody>
           </table>
         </div>
