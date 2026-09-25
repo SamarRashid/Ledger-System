@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Search, Edit2, Trash2, MapPin, X, CheckCircle } from "lucide-react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 interface Area {
   id: string;
   code: string;
@@ -38,34 +40,21 @@ export default function AreaConfigPage() {
     description: "",
   });
 
-  useEffect(() => {
-    const saved = localStorage.getItem("areas");
-    if (saved) {
-      setAreas(JSON.parse(saved));
-    } else {
-      // Seed some mock data if empty
-      const mockAreas: Area[] = [
-        {
-          id: "1",
-          code: "A-001",
-          postalCode: "54000",
-          nameEn: "Main Market",
-          nameUr: "مین مارکیٹ",
-          city: "Lahore",
-          route: "Central Route",
-          status: "active",
-          description: "Primary commercial area",
-        },
-      ];
-      setAreas(mockAreas);
-      localStorage.setItem("areas", JSON.stringify(mockAreas));
+  const loadAreas = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/areas`);
+      const data = await response.json();
+      if (data.success) {
+        setAreas(data.data);
+      }
+    } catch (e) {
+      console.error("Failed to load areas", e);
     }
-  }, []);
-
-  const saveToStorage = (data: Area[]) => {
-    setAreas(data);
-    localStorage.setItem("areas", JSON.stringify(data));
   };
+
+  useEffect(() => {
+    loadAreas();
+  }, []);
 
   const handleOpenModal = (area?: Area) => {
     if (area) {
@@ -74,7 +63,7 @@ export default function AreaConfigPage() {
     } else {
       setSelectedArea(null);
       setFormData({
-        code: `A-${String(areas.length + 1).padStart(3, "0")}`, // Auto ID
+        code: `A-${String(areas.length > 0 ? Math.max(...areas.map(a => parseInt(a.code.replace('A-', '')) || 0)) + 1 : 1).padStart(3, "0")}`, // Auto ID
         postalCode: "",
         nameEn: "",
         nameUr: "",
@@ -92,47 +81,89 @@ export default function AreaConfigPage() {
     setSelectedArea(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedArea) {
-      // Update
-      const updated = areas.map((a) => (a.id === selectedArea.id ? { ...a, ...formData } as Area : a));
-      saveToStorage(updated);
-      setToastMsg("Area updated successfully!");
-    } else {
-      // Add
-      const newArea = { ...formData, id: Date.now().toString() } as Area;
-      saveToStorage([...areas, newArea]);
-      setToastMsg("Area added successfully!");
-    }
-    setTimeout(() => setToastMsg(""), 3000);
-    handleCloseModal();
-  };
-
-  const handleDelete = () => {
-    if (selectedArea) {
-      const updated = areas.filter((a) => a.id !== selectedArea.id);
-      saveToStorage(updated);
-      setIsDeleteModalOpen(false);
-      setSelectedArea(null);
-    }
-  };
-
-  const toggleStatus = (area: Area) => {
-    const updated = areas.map((a) => {
-      if (a.id === area.id) {
-        return { ...a, status: a.status === "active" ? "inactive" : "active" } as Area;
+    try {
+      if (selectedArea) {
+        // Update
+        const response = await fetch(`${API_URL}/api/areas/${selectedArea.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
+        const data = await response.json();
+        if (data.success) {
+          setToastMsg("Area updated successfully!");
+          loadAreas();
+        } else {
+          alert(data.message);
+        }
+      } else {
+        // Add
+        const response = await fetch(`${API_URL}/api/areas`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
+        const data = await response.json();
+        if (data.success) {
+          setToastMsg("Area added successfully!");
+          loadAreas();
+        } else {
+          alert(data.message);
+        }
       }
-      return a;
-    });
-    saveToStorage(updated);
+      setTimeout(() => setToastMsg(""), 3000);
+      handleCloseModal();
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong with the API");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (selectedArea) {
+      try {
+        const response = await fetch(`${API_URL}/api/areas/${selectedArea.id}`, {
+          method: "DELETE",
+        });
+        const data = await response.json();
+        if (data.success) {
+          setIsDeleteModalOpen(false);
+          setSelectedArea(null);
+          loadAreas();
+        } else {
+          alert(data.message);
+        }
+      } catch (error) {
+        console.error(error);
+        alert("Failed to delete area");
+      }
+    }
+  };
+
+  const toggleStatus = async (area: Area) => {
+    const newStatus = area.status === "active" ? "inactive" : "active";
+    try {
+      const response = await fetch(`${API_URL}/api/areas/${area.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        loadAreas();
+      }
+    } catch (error) {
+      console.error("Failed to toggle status", error);
+    }
   };
 
   const filteredAreas = areas.filter(
     (a) =>
-      a.nameEn.toLowerCase().includes(search.toLowerCase()) ||
-      a.nameUr.includes(search) ||
-      a.code.toLowerCase().includes(search.toLowerCase())
+      (a.nameEn || "").toLowerCase().includes(search.toLowerCase()) ||
+      (a.nameUr || "").includes(search) ||
+      (a.code || "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
