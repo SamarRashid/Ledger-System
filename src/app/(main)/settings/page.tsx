@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   User,
   Save,
@@ -28,6 +28,7 @@ interface ProfileSettings {
   businessName: string;
   phone: string;
   address: string;
+  profileImage?: string;
 }
 
 interface SystemUser {
@@ -68,7 +69,21 @@ export default function SettingsPage(): React.JSX.Element {
     businessName: "Ledger System",
     phone: "",
     address: "",
+    profileImage: "",
   });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSettings((prev) => ({ ...prev, profileImage: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const [users, setUsers] = useState<SystemUser[]>([]);
 
@@ -189,6 +204,7 @@ export default function SettingsPage(): React.JSX.Element {
           businessName: profile.businessName || "",
           phone: profile.phone || "",
           address: profile.address || "",
+          profileImage: profile.profileImage || "",
         });
       }
     } catch (error: any) {
@@ -831,11 +847,18 @@ export default function SettingsPage(): React.JSX.Element {
 
                   <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-slate-50 dark:border-slate-700/50">
 
-                    <div className="relative group cursor-pointer">
+                    <div 
+                      className="relative group cursor-pointer"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
 
-                      <div className="w-24 h-24 rounded-full bg-slate-100 dark:bg-slate-700 border-4 border-white dark:border-slate-800 shadow-lg flex items-center justify-center overflow-hidden transition-transform group-hover:scale-105">
+                      <div className="w-24 h-24 rounded-full bg-slate-100 dark:bg-slate-700 border-4 border-white dark:border-slate-800 shadow-lg flex items-center justify-center overflow-hidden transition-transform group-hover:scale-105 relative">
 
-                        <User className="w-12 h-12 text-slate-400 dark:text-slate-500" />
+                        {settings.profileImage ? (
+                          <img src={settings.profileImage} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                          <User className="w-12 h-12 text-slate-400 dark:text-slate-500" />
+                        )}
 
                       </div>
 
@@ -846,6 +869,14 @@ export default function SettingsPage(): React.JSX.Element {
                       </div>
 
                     </div>
+
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      ref={fileInputRef} 
+                      onChange={handleImageUpload} 
+                    />
 
                     <div className="text-center sm:text-left space-y-1">
                       <h3 className="text-sm font-bold text-slate-800 dark:text-white">
