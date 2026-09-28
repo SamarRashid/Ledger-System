@@ -55,6 +55,11 @@ export default function BillingPage() {
   const [freight, setFreight] = useState<number | "">(0);
   const [labor, setLabor] = useState<number | "">(70);
   const [otherCharges, setOtherCharges] = useState<number | "">(0);
+  
+  const [note, setNote] = useState<string>("");
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
   // Line Items State
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -111,66 +116,109 @@ export default function BillingPage() {
     setFreight(0);
     setLabor(70);
     setOtherCharges(0);
+    setNote("");
     setLineItems([]);
     setBillNo(prev => (parseInt(prev) ? parseInt(prev) + 1 : 1001).toString());
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedBeopari || lineItems.length === 0) {
       alert("Please select a beopari and add at least one item.");
       return;
     }
 
-    // Group lineItems by customer
-    const customerTotals = new Map<string, { customer: Account | null; amount: number; commission: number; items: any[] }>();
-    
-    lineItems.forEach(li => {
-      const key = li.customer ? li.customer.code : "UNKNOWN";
-      if (!customerTotals.has(key)) {
-        customerTotals.set(key, { customer: li.customer, amount: 0, commission: 0, items: [] });
-      }
-      customerTotals.get(key)!.amount += li.amount;
-      customerTotals.get(key)!.commission += li.amount * ((Number(li.commissionPct) || 0) / 100);
-      customerTotals.get(key)!.items.push(li);
-    });
+    setIsSaving(true);
 
-    const newRecords = Array.from(customerTotals.values()).map((ct, idx) => ({
-      id: Date.now() + idx,
+    const invoicePayload = {
       date,
-      customerCode: ct.customer?.code || "-",
-      customerNameUrdu: ct.customer?.nameUrdu || "نامعلوم (Unknown)",
-      customerNameEnglish: ct.customer?.nameEnglish || "Unknown",
-      transactionType: "receipt", // Debt for buyer
-      amount: ct.amount, // Base amount
-      commission: ct.commission,
-      netAmount: ct.amount + ct.commission,
-      items: ct.items,
-      description: `بل نمبر: ${billNo}, اشیاء کی خریداری`
-    }));
-
-    // Beopari (Supplier) gets a payment/credit record
-    const beopariRecord = {
-      id: Date.now() + 1000,
-      date,
-      customerCode: selectedBeopari.code || "-",
-      customerNameUrdu: selectedBeopari.nameUrdu || "-",
-      customerNameEnglish: selectedBeopari.nameEnglish || "-",
-      transactionType: "payment", // We owe money to Beopari
-      amount: netTotal,
-      description: `بل نمبر: ${billNo}, خالص بل بیوپاری`
+      billNo,
+      copyNo,
+      vehicleNo: gaariNo,
+      beopari: selectedBeopari,
+      lineItems,
+      deductions: {
+        freight: Number(freight) || 0,
+        labor: Number(labor) || 0,
+        otherCharges: Number(otherCharges) || 0
+      },
+      totals: {
+        totalWeight,
+        totalAmount,
+        totalCommission,
+        totalDeductions,
+        netTotal
+      },
+      note
     };
 
-    const existingStr = localStorage.getItem("katcha_chitha_records");
-    let existing = [];
-    if (existingStr) {
-      try {
-        existing = JSON.parse(existingStr);
-      } catch (e) {}
-    }
-    
-    localStorage.setItem("katcha_chitha_records", JSON.stringify([...newRecords, beopariRecord, ...existing]));
+    try {
+      const response = await fetch(`${API_URL}/api/bills`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(invoicePayload)
+      }).catch(() => null);
 
-    setShowToast(true);
+      let isSuccess = false;
+      if (response && response.ok) {
+        const data = await response.json();
+        isSuccess = data.success !== false;
+      }
+
+      if (!isSuccess) {
+        // Local fallback for offline/no-backend scenario
+        const customerTotals = new Map<string, { customer: Account | null; amount: number; commission: number; items: any[] }>();
+        lineItems.forEach(li => {
+          const key = li.customer ? li.customer.code : "UNKNOWN";
+          if (!customerTotals.has(key)) {
+            customerTotals.set(key, { customer: li.customer, amount: 0, commission: 0, items: [] });
+          }
+          customerTotals.get(key)!.amount += li.amount;
+          customerTotals.get(key)!.commission += li.amount * ((Number(li.commissionPct) || 0) / 100);
+          customerTotals.get(key)!.items.push(li);
+        });
+
+        const newRecords = Array.from(customerTotals.values()).map((ct, idx) => ({
+          id: Date.now() + idx,
+          date,
+          customerCode: ct.customer?.code || "-",
+          customerNameUrdu: ct.customer?.nameUrdu || "نامعلوم (Unknown)",
+          customerNameEnglish: ct.customer?.nameEnglish || "Unknown",
+          transactionType: "receipt",
+          amount: ct.amount,
+          commission: ct.commission,
+          netAmount: ct.amount + ct.commission,
+          items: ct.items,
+          description: `بل نمبر: ${billNo}, اشیاء کی خریداری${note ? ` - ${note}` : ""}`
+        }));
+
+        const beopariRecord = {
+          id: Date.now() + 1000,
+          date,
+          customerCode: selectedBeopari.code || "-",
+          customerNameUrdu: selectedBeopari.nameUrdu || "-",
+          customerNameEnglish: selectedBeopari.nameEnglish || "-",
+          transactionType: "payment",
+          amount: netTotal,
+          description: `بل نمبر: ${billNo}, خالص بل بیوپاری${note ? ` - ${note}` : ""}`
+        };
+
+        const existingStr = localStorage.getItem("katcha_chitha_records");
+        let existing = [];
+        if (existingStr) {
+          try {
+            existing = JSON.parse(existingStr);
+          } catch (e) {}
+        }
+        localStorage.setItem("katcha_chitha_records", JSON.stringify([...newRecords, beopariRecord, ...existing]));
+      }
+
+      setShowToast(true);
+    } catch (e) {
+      console.error(e);
+      alert("Error saving invoice.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handlePrint = () => {
@@ -348,13 +396,13 @@ export default function BillingPage() {
             {/* Bill Note */}
             <div className="mt-3 pt-3 border-t border-[#E2E8F0] flex items-center gap-2" dir="rtl">
               <label className="font-bold text-[#0F172A] text-xs shrink-0 whitespace-nowrap">بل نوٹ (Note):</label>
-              <input type="text" placeholder="کوئی نوٹ لکھیں..." className="flex-1 border border-[#E2E8F0] p-1.5 bg-[#F8FAFC] text-xs font-urdu focus:outline-none focus:border-[#06b6d4] rounded-md transition-colors" />
+              <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="کوئی نوٹ لکھیں..." className="flex-1 border border-[#E2E8F0] p-1.5 bg-[#F8FAFC] text-xs font-urdu focus:outline-none focus:border-[#06b6d4] rounded-md transition-colors" />
             </div>
 
             {/* Action Buttons - Moved to Left Pane */}
             <div className="flex gap-3 pt-4 shrink-0 items-center">
-              <button onClick={handleSave} className="flex-1 bg-[#06b6d4] text-white py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-cyan-600 transition-colors shadow-sm">
-                <Save className="h-4 w-4" /> Save (محفوظ)
+              <button disabled={isSaving} onClick={handleSave} className="flex-1 bg-[#06b6d4] text-white py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-cyan-600 transition-colors shadow-sm disabled:opacity-50">
+                <Save className="h-4 w-4" /> {isSaving ? "Saving..." : "Save (محفوظ)"}
               </button>
               <button onClick={handlePrint} className="flex-1 bg-[#064789] text-white py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#053a70] transition-colors shadow-sm">
                 <Printer className="h-4 w-4" /> Print (پرنٹ)
@@ -581,6 +629,7 @@ export default function BillingPage() {
         onSelect={(acc) => {
           setSelectedCustomer(acc);
         }}
+        typeFilter="گاہک"
       />
       <AccountSearchModal 
         isOpen={isBeopariSearchOpen} 
@@ -588,6 +637,7 @@ export default function BillingPage() {
         onSelect={(acc) => {
           setSelectedBeopari(acc);
         }}
+        typeFilter="بیوپاری"
       />
       <ItemSearchModal 
         isOpen={isItemSearchOpen} 
