@@ -19,7 +19,8 @@ import {
   Truck,
   Package,
   ClipboardList,
-  MapPin
+  MapPin,
+  Wallet
 } from "lucide-react";
 import { cn } from "@/components/layout/Header";
 
@@ -41,6 +42,7 @@ const navLinks = [
       { href: "/configration/area", icon: MapPin, labelEn: "Areas", labelUr: "علاقہ جات" },
       { href: "/configration", icon: Users, labelEn: "Customers", labelUr: "کسٹمر" },
       { href: "/suplier", icon: Truck, labelEn: "Suppliers", labelUr: "سپلائر" },
+      { href: "/configration/expense", icon: Wallet, labelEn: "Expenses", labelUr: "اخراجات" },
       { href: "/products", icon: Package, labelEn: "Products", labelUr: "پروڈکٹس" },
     ]
   },

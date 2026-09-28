@@ -35,6 +35,7 @@ export function Header({ onMobileMenuClick, isSidebarPinned, setIsSidebarPinned 
     if (pathname?.includes('katcha-chitha')) return 'Day Book (کچا چٹھا)';
     if (pathname?.includes('wasoli-report')) return 'Recovery Report (وصولی رپورٹ)';
     if (pathname?.includes('configration/area')) return 'Area Management (علاقہ جات)';
+    if (pathname?.includes('configration/expense')) return 'Expense Configuration (اخراجات)';
     if (pathname === '/configration' || pathname === '/configration/') return 'Customer Management (گاہک)';
     if (pathname?.includes('suplier')) return 'Supplier Management (سپلائر)';
     if (pathname?.includes('products')) return 'Product Management (پروڈکٹس)';
