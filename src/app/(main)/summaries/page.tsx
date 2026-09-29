@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Printer, LayoutDashboard, CalendarDays, Receipt, Scale, Wallet, TrendingUp } from "lucide-react";
 
 // Mock Data for a Specific Day
@@ -12,47 +12,128 @@ const MOCK_SALES = [
 
 export default function SummariesPage() {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [bills, setBills] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBills = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bills`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setBills(data.data);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch bills", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBills();
+  }, []);
 
   const handlePrint = () => {
     window.print();
   };
 
-  const totalWeight = MOCK_SALES.reduce((acc, curr) => acc + curr.weight, 0);
-  const totalNetTotal = MOCK_SALES.reduce((acc, curr) => acc + curr.netTotal, 0);
-  const mockCommission = totalNetTotal * 0.087;
+  const filteredBills = bills.filter((b) => b.date && b.date.startsWith(date));
+
+  const totalWeight = filteredBills.reduce((acc, curr) => acc + (Number(curr.totals?.totalWeight) || 0), 0);
+  const totalNetTotal = filteredBills.reduce((acc, curr) => acc + (Number(curr.totals?.netTotal) || 0), 0);
+  
+  // Calculate commission
+  const totalCommission = filteredBills.reduce((acc, curr) => acc + (Number(curr.totals?.totalCommission) || 0), 0);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8 animate-in fade-in duration-500 pb-12">
       
-      {/* Header & Controls - Glassmorphism Style */}
-      <div className="print:hidden flex justify-end gap-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl p-4 rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-700/60 relative overflow-hidden group transition-colors">
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto relative z-10">
-          <div className="relative w-full sm:w-auto">
-            <CalendarDays className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
-            <input 
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:border-[#083D77] focus:ring-2 focus:ring-[#083D77]/20 text-slate-700 dark:text-slate-200 font-medium transition-all shadow-sm hover:border-slate-300 dark:hover:border-slate-500"
-            />
+      {/* PRINT TEMPLATE */}
+      <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-8 text-black font-urdu" dir="rtl">
+        <div className="border-2 border-black p-6 rounded-lg max-w-4xl mx-auto mt-10">
+          <div className="text-center mb-6 border-b-2 border-black pb-4">
+            <h1 className="text-4xl font-bold font-urdu mb-2">Ledger System</h1>
+            <p className="text-sm font-bold">Commission Agent System</p>
+            <h2 className="text-2xl font-bold mt-4">روزانہ خلاصہ (Daily Summary)</h2>
+          </div>
+          
+          <div className="flex justify-between font-bold text-lg mb-6">
+            <p><strong>تاریخ: </strong> <span suppressHydrationWarning>{date}</span></p>
+            <p><strong>کل بل: </strong> {filteredBills.length}</p>
+          </div>
+
+          <table className="w-full border-collapse border border-black mb-8 text-lg font-bold">
+            <thead>
+              <tr className="bg-gray-200">
+                <th className="border border-black p-2 text-center">بل نمبر</th>
+                <th className="border border-black p-2 text-right">کسٹمر کا نام</th>
+                <th className="border border-black p-2 text-center">کل وزن (KG)</th>
+                <th className="border border-black p-2 text-center">خالص کل رقم (RS)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredBills.map((bill) => {
+                  const customerNames = bill.lineItems 
+                    ? [...new Set(bill.lineItems.map((li: any) => li.customer?.nameUrdu).filter(Boolean))].join(", ")
+                    : "Unknown";
+                  return (
+                    <tr key={bill._id || bill.id}>
+                      <td className="border border-black p-2 text-center">{bill.billNo || "N/A"}</td>
+                      <td className="border border-black p-2 text-right">{customerNames}</td>
+                      <td className="border border-black p-2 text-center">{(Number(bill.totals?.totalWeight) || 0).toLocaleString()}</td>
+                      <td className="border border-black p-2 text-center">{(Number(bill.totals?.netTotal) || 0).toLocaleString()}</td>
+                    </tr>
+                  )
+              })}
+            </tbody>
+            <tfoot className="bg-gray-100">
+              <tr>
+                <td colSpan={2} className="border border-black p-2 text-left font-bold">مجموعی ٹوٹل:</td>
+                <td className="border border-black p-2 text-center font-bold">{totalWeight.toLocaleString()} KG</td>
+                <td className="border border-black p-2 text-center font-bold">{totalNetTotal.toLocaleString()} RS</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <div className="flex justify-end items-start text-lg font-bold mt-8">
+             <div className="w-1/3 border-2 border-black p-4 rounded-lg bg-gray-50 text-right">
+              <div className="flex justify-between mb-2"><span className="text-left">{totalNetTotal.toLocaleString()}</span> <span>:کل رقم</span></div>
+              <div className="flex justify-between mb-2"><span className="text-left">{Math.round(totalCommission).toLocaleString()}</span> <span>:کمیشن</span></div>
+            </div>
+          </div>
+          
+          <div className="mt-20 flex justify-between text-xl font-bold">
+            <div className="border-t-2 border-black pt-2 px-10 text-center mx-auto">دستخط مینجر</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="print:hidden space-y-6 lg:space-y-8">
+        {/* Sleek Header & Controls */}
+        <div className="flex justify-end items-center gap-3">
+          <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 shadow-sm">
+            <div className="flex items-center gap-2 px-3 py-2">
+              <CalendarDays className="w-4 h-4 text-slate-400" />
+              <input 
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="bg-transparent border-none text-[13px] font-bold text-[#083D77] dark:text-blue-400 focus:outline-none focus:ring-0 cursor-pointer w-[110px]"
+              />
+            </div>
           </div>
           <button 
             onClick={handlePrint}
-            className="w-full sm:w-auto bg-[#083D77] dark:bg-blue-900 hover:bg-[#062c57] dark:hover:bg-blue-800 text-white px-5 py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-[0_4px_14px_0_rgba(8,61,119,0.39)] hover:shadow-[0_6px_20px_rgba(8,61,119,0.23)] hover:-translate-y-0.5"
+            className="bg-[#083D77] dark:bg-blue-900 hover:bg-[#062c57] dark:hover:bg-blue-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-sm"
           >
             <Printer className="h-4 w-4" />
             Print / Export
           </button>
         </div>
-      </div>
 
-      <div className="print:block print:space-y-8 space-y-6 lg:space-y-8">
-        
-        {/* Print Only Header */}
-        <div className="hidden print:block border-b-2 border-slate-900 pb-4">
-          <h2 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Daily Summary Report</h2>
-          <div className="text-lg font-bold text-slate-600 mt-1">Date: {date}</div>
-        </div>
+
 
         {/* Premium Stat Cards Grid - Clickable & styled like Dashboard */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 print:hidden">
@@ -72,7 +153,7 @@ export default function SummariesPage() {
               </h3>
               <div className="text-left mt-auto">
                 <span className="text-[20px] font-extrabold text-[#173753] dark:text-blue-100 tracking-tight">
-                  {MOCK_SALES.length}
+                  {filteredBills.length}
                 </span>
               </div>
             </div>
@@ -141,7 +222,7 @@ export default function SummariesPage() {
               </h3>
               <div className="text-left mt-auto flex items-baseline">
                 <span className="text-[20px] font-extrabold text-[#173753] dark:text-blue-100 tracking-tight">
-                  {mockCommission.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  {Math.round(totalCommission).toLocaleString()}
                 </span>
                 <span className="text-[10px] font-bold text-slate-400 ml-1">
                   RS
@@ -152,27 +233,7 @@ export default function SummariesPage() {
 
         </div>
 
-        {/* Print-only Summary Table (Fall-back for printing) */}
-        <div className="hidden print:block border-2 border-slate-900 mb-8 rounded-lg overflow-hidden">
-           <table className="w-full text-left whitespace-nowrap">
-              <thead className="bg-slate-100 text-sm uppercase font-bold text-slate-800">
-                <tr>
-                  <th className="px-4 py-3 text-start border-r border-slate-300">Total Bills (کل بل)</th>
-                  <th className="px-4 py-3 text-end border-r border-slate-300">Total Weight Kg (کل وزن)</th>
-                  <th className="px-4 py-3 text-end border-r border-slate-300">Total Amount RS (کل رقم)</th>
-                  <th className="px-4 py-3 text-end text-slate-900">8% Commission (کمیشن)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-300">
-                <tr className="text-lg font-black text-slate-900">
-                  <td className="px-4 py-4 text-start border-r border-slate-300">{MOCK_SALES.length}</td>
-                  <td className="px-4 py-4 text-end border-r border-slate-300">{totalWeight.toLocaleString()}</td>
-                  <td className="px-4 py-4 text-end border-r border-slate-300">{totalNetTotal.toLocaleString()}</td>
-                  <td className="px-4 py-4 text-end">{Math.round(mockCommission).toLocaleString()}</td>
-                </tr>
-              </tbody>
-            </table>
-        </div>
+
 
         {/* Daily Sales Detail Table */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden print:shadow-none border border-slate-100 dark:border-slate-700 print:border-none transition-colors">
@@ -194,14 +255,43 @@ export default function SummariesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                {MOCK_SALES.map((sale) => (
-                  <tr key={sale.id} className="hover:bg-blue-50/50 dark:hover:bg-slate-700/50 transition-colors group cursor-default">
-                    <td className="px-5 py-4 font-bold text-slate-900 dark:text-white text-start group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{sale.invoiceNo}</td>
-                    <td className="px-5 py-4 text-start text-slate-600 dark:text-slate-300">{sale.customer}</td>
-                    <td className="px-5 py-4 text-end text-slate-600 dark:text-slate-300">{sale.weight.toLocaleString()}</td>
-                    <td className="px-5 py-4 text-end font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{sale.netTotal.toLocaleString()} RS</td>
+                {loading ? (
+                  <tr>
+                    <td colSpan={4} className="px-5 py-8 text-center text-slate-500 font-bold">
+                      Loading summaries... (لوڈ ہو رہا ہے)
+                    </td>
                   </tr>
-                ))}
+                ) : filteredBills.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-5 py-8 text-center text-slate-500 font-bold">
+                      No bills found for this date. (اس تاریخ کا کوئی بل موجود نہیں)
+                    </td>
+                  </tr>
+                ) : (
+                  filteredBills.map((bill) => {
+                    // Extract unique customers from lineItems
+                    const customerNames = bill.lineItems 
+                      ? [...new Set(bill.lineItems.map((li: any) => li.customer?.nameUrdu).filter(Boolean))].join(", ")
+                      : "Unknown";
+
+                    return (
+                      <tr key={bill._id || bill.id} className="hover:bg-blue-50/50 dark:hover:bg-slate-700/50 transition-colors group cursor-default">
+                        <td className="px-5 py-4 font-bold text-slate-900 dark:text-white text-start group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                          {bill.billNo || "N/A"}
+                        </td>
+                        <td className="px-5 py-4 text-start text-slate-600 dark:text-slate-300">
+                          {customerNames}
+                        </td>
+                        <td className="px-5 py-4 text-end text-slate-600 dark:text-slate-300">
+                          {(Number(bill.totals?.totalWeight) || 0).toLocaleString()}
+                        </td>
+                        <td className="px-5 py-4 text-end font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                          {(Number(bill.totals?.netTotal) || 0).toLocaleString()} RS
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
               <tfoot className="bg-slate-50 dark:bg-slate-800 font-black border-t-2 border-slate-200 dark:border-slate-600 text-base text-slate-900 dark:text-white">
                 <tr>

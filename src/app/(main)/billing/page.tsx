@@ -28,6 +28,27 @@ export default function BillingPage() {
     return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
   }, []);
 
+  useEffect(() => {
+    const fetchLatestBillNo = async () => {
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+        const res = await fetch(`${API_URL}/api/bills`).catch(() => null);
+        if (res && res.ok) {
+          const data = await res.json();
+          if (data.success && data.data && data.data.length > 0) {
+            const maxBillNo = Math.max(...data.data.map((b: any) => parseInt(b.billNo) || 0));
+            if (maxBillNo > 0) {
+              setBillNo((maxBillNo + 1).toString());
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch latest bill no", e);
+      }
+    };
+    fetchLatestBillNo();
+  }, []);
+
   const [showToast, setShowToast] = useState<boolean>(false);
   const [isItemSearchOpen, setIsItemSearchOpen] = useState<boolean>(false);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
@@ -46,15 +67,15 @@ export default function BillingPage() {
   const [commissionPct, setCommissionPct] = useState<number | "">(8);
   const [jama, setJama] = useState<number | "">(0);
   const [itemSize, setItemSize] = useState<string>("");
-  const [bags, setBags] = useState<number | "">(12);
-  const [weight, setWeight] = useState<number | "">(150);
-  const [rate, setRate] = useState<number | "">(21);
+  const [bags, setBags] = useState<number | "">("");
+  const [weight, setWeight] = useState<number | "">("");
+  const [rate, setRate] = useState<number | "">("");
   
   // Deductions State
   const [isDeductionsOpen, setIsDeductionsOpen] = useState<boolean>(false);
-  const [freight, setFreight] = useState<number | "">(0);
-  const [labor, setLabor] = useState<number | "">(70);
-  const [otherCharges, setOtherCharges] = useState<number | "">(0);
+  const [freight, setFreight] = useState<number | "">("");
+  const [labor, setLabor] = useState<number | "">("");
+  const [otherCharges, setOtherCharges] = useState<number | "">("");
   
   const [note, setNote] = useState<string>("");
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -110,12 +131,12 @@ export default function BillingPage() {
     setCommissionPct(8);
     setJama(0);
     setItemSize("");
-    setBags(12);
-    setWeight(150);
-    setRate(21);
-    setFreight(0);
-    setLabor(70);
-    setOtherCharges(0);
+    setBags("");
+    setWeight("");
+    setRate("");
+    setFreight("");
+    setLabor("");
+    setOtherCharges("");
     setNote("");
     setLineItems([]);
     setBillNo(prev => (parseInt(prev) ? parseInt(prev) + 1 : 1001).toString());

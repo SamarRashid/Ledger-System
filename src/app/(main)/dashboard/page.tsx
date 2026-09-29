@@ -31,35 +31,25 @@ interface ChartData {
   revenue: number;
 }
 
+// Real data will be fetched from the backend.
+// We keep generateMockData as a fallback or for missing dates.
 const generateMockData = (): ChartData[] => {
   const data: ChartData[] = [];
   const today = new Date();
   const start = new Date(today);
-
   start.setDate(start.getDate() - 30);
 
   for (let i = 0; i <= 30; i++) {
     const d = new Date(start);
     d.setDate(d.getDate() + i);
-
-    // Add distinct dramatic waves to make the chart look incredibly premium
-    const baseValue = 2500;
-    const wave = Math.sin(i / 1.5) * 800 + Math.cos(i / 2.2) * 400;
-    const trend = i * 35;
-
     data.push({
       dateStr: d.toISOString().split("T")[0],
-      name: d.toLocaleDateString("en-US", {
-        weekday: "short",
-      }),
-      revenue: Math.max(500, baseValue + wave + trend),
+      name: d.toLocaleDateString("en-US", { weekday: "short" }),
+      revenue: 0,
     });
   }
-
   return data;
 };
-
-const fullMockData = generateMockData();
 
 export default function DashboardPage() {
   const todayStr = new Date().toISOString().split("T")[0];
@@ -73,33 +63,74 @@ export default function DashboardPage() {
   const [fromDate, setFromDate] = useState<string>(lastWeekStr);
   const [toDate, setToDate] = useState<string>(todayStr);
   const [currentDateStr, setCurrentDateStr] = useState<string>("");
+  
+  const [bills, setBills] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const d = new Date();
-
     const formattedDate = d.toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
     });
-
     const formattedDay = d.toLocaleDateString("en-US", {
       weekday: "short",
     });
-
     setCurrentDateStr(`${formattedDate}, ${formattedDay}`);
+
+    const fetchBills = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bills`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setBills(data.data);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch dashboard bills", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBills();
   }, []);
 
   const filteredData = useMemo(() => {
-    return fullMockData.filter((item) => {
-      const itemDate = item.dateStr;
+    // Start with a zeroed-out array of dates
+    const dataTemplate = generateMockData();
+    
+    // Group bills by date
+    const revenueByDate = new Map<string, number>();
+    bills.forEach((b: any) => {
+      if (b.date) {
+        const d = b.date.split("T")[0];
+        const amount = Number(b.totals?.netTotal) || 0;
+        revenueByDate.set(d, (revenueByDate.get(d) || 0) + amount);
+      }
+    });
 
+    // Populate dataTemplate
+    const populatedData = dataTemplate.map(item => ({
+      ...item,
+      revenue: revenueByDate.get(item.dateStr) || 0
+    }));
+
+    // Filter by date range
+    return populatedData.filter((item) => {
+      const itemDate = item.dateStr;
       const isAfterFrom = fromDate ? itemDate >= fromDate : true;
       const isBeforeTo = toDate ? itemDate <= toDate : true;
-
       return isAfterFrom && isBeforeTo;
     });
-  }, [fromDate, toDate]);
+  }, [fromDate, toDate, bills]);
+
+  // Compute Today's Stats
+  const todayBills = bills.filter(b => b.date && b.date.startsWith(todayStr));
+  const todaySales = todayBills.reduce((sum, b) => sum + (Number(b.totals?.netTotal) || 0), 0);
+  const todayCommission = todayBills.reduce((sum, b) => sum + (Number(b.totals?.totalCommission) || 0), 0);
 
   return (
     <div className="space-y-7">
@@ -140,7 +171,7 @@ export default function DashboardPage() {
 
             <div className="text-left mt-auto">
               <span className="text-[17px] font-extrabold text-[#173753] dark:text-blue-100 tracking-tight">
-                2,450,000
+                {todaySales.toLocaleString()}
               </span>
 
               <span className="text-[10px] font-bold text-slate-400 ml-1">
@@ -170,7 +201,7 @@ export default function DashboardPage() {
 
             <div className="text-left mt-auto">
               <span className="text-[17px] font-extrabold text-[#173753] dark:text-blue-100 tracking-tight">
-                850,000
+                0
               </span>
 
               <span className="text-[10px] font-bold text-slate-400 ml-1">
@@ -200,7 +231,7 @@ export default function DashboardPage() {
 
             <div className="text-left mt-auto">
               <span className="text-[17px] font-extrabold text-[#173753] dark:text-blue-100 tracking-tight">
-                15.4M
+                0
               </span>
 
               <span className="text-[10px] font-bold text-slate-400 ml-1">
@@ -230,7 +261,7 @@ export default function DashboardPage() {
 
             <div className="text-left mt-auto">
               <span className="text-[17px] font-extrabold text-[#173753] dark:text-blue-100 tracking-tight">
-                196,000
+                {todayCommission.toLocaleString()}
               </span>
 
               <span className="text-[10px] font-bold text-slate-400 ml-1">

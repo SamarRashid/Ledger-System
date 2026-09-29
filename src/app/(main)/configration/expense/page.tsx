@@ -6,7 +6,8 @@ import { Plus, Search, Edit3, Trash2, Save, X, Receipt, Wallet } from "lucide-re
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export interface Expense {
-  id: string;
+  id?: string;
+  _id?: string;
   code: string;
   nameUrdu: string;
   nameEnglish: string;
@@ -157,7 +158,7 @@ export default function ExpenseConfigPage(): React.JSX.Element {
 
         if (!success) {
           // Local fallback update
-          const updated = expenses.map(e => e.id === editingId ? { ...payload, id: editingId } : e);
+          const updated = expenses.map(e => (e._id || e.id) === editingId ? { ...payload, id: editingId } : e);
           syncToLocal(updated);
           success = true;
         }
@@ -201,7 +202,7 @@ export default function ExpenseConfigPage(): React.JSX.Element {
 
   // Open Modal with Selected Expense Data for Editing
   const handleEdit = (expense: Expense): void => {
-    setEditingId(expense.id);
+    setEditingId(expense._id || expense.id || null);
     setCode(expense.code);
     setNameUrdu(expense.nameUrdu);
     setNameEnglish(expense.nameEnglish);
@@ -234,7 +235,7 @@ export default function ExpenseConfigPage(): React.JSX.Element {
 
         if (!success) {
           // Local fallback delete
-          const updated = expenses.filter(e => e.id !== deletingId);
+          const updated = expenses.filter(e => (e._id || e.id) !== deletingId);
           syncToLocal(updated);
           success = true;
         }
@@ -315,7 +316,7 @@ export default function ExpenseConfigPage(): React.JSX.Element {
                 </tr>
               ) : (
                 filteredExpenses.map((expense, idx) => (
-                  <tr key={expense.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                  <tr key={expense._id || expense.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                     <td className="p-4 text-center font-mono text-slate-400">
                       {idx + 1}
                     </td>
@@ -371,7 +372,7 @@ export default function ExpenseConfigPage(): React.JSX.Element {
                         </button>
                         <button
                           type="button"
-                          onClick={() => confirmDelete(expense.id)}
+                          onClick={() => confirmDelete(expense._id || expense.id || "")}
                           className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
                           title="Delete (ڈیلیٹ کریں)"
                         >

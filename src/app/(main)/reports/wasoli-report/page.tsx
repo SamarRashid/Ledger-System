@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Search, Filter, Phone, Calendar, Users, Printer, Share2 } from "lucide-react";
 
 interface WasoliRecord {
@@ -11,30 +11,50 @@ interface WasoliRecord {
   area: string;
   phone: string;
   lastPaymentDate: string; // YYYY-MM-DD format
+  previousBalance: number;
   freshDebt: number;
   freshReceipt: number;
   balance: number;
 }
 
-// Generate some mock data matching the printed report structure
-const today = new Date();
-const mockData: WasoliRecord[] = [
-  { id: 1, accountNo: "691", customerNameEn: "Ahmed Mandi", customerNameUr: "احمد منڈی", area: "اڈہ بلی", phone: "0300-1234567", lastPaymentDate: new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], freshDebt: 4786, freshReceipt: 0, balance: 4786 },
-  { id: 2, accountNo: "885", customerNameEn: "Ilyas Bagh Wala", customerNameUr: "الیاس باغ والا", area: "اڈہ بلی", phone: "0301-7654321", lastPaymentDate: new Date(today.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], freshDebt: 114381, freshReceipt: 0, balance: 114381 },
-  { id: 3, accountNo: "483", customerNameEn: "Ustad Jaleel", customerNameUr: "استاد جلیل عالم چوک", area: "اڈہ بلی", phone: "0321-9988776", lastPaymentDate: new Date(today.getTime() - 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], freshDebt: 5381, freshReceipt: 0, balance: 5381 },
-  { id: 4, accountNo: "653", customerNameEn: "Bara Pindi", customerNameUr: "باڑا پنڈی", area: "اڈہ بلی", phone: "0333-5566778", lastPaymentDate: new Date(today.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], freshDebt: 2198, freshReceipt: 0, balance: 2198 },
-  { id: 5, accountNo: "837", customerNameEn: "Hassan Shami Mandi", customerNameUr: "حسن شامی منڈی", area: "اڈہ بلی", phone: "0345-1122334", lastPaymentDate: new Date(today.getTime() - 32 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], freshDebt: 131041, freshReceipt: 0, balance: 131041 },
-  
-  { id: 6, accountNo: "830", customerNameEn: "Asad Sadaf Mandi", customerNameUr: "اسد صدف منڈی", area: "منڈی", phone: "0300-9988112", lastPaymentDate: new Date(today.getTime() - 8 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], freshDebt: 9029, freshReceipt: 0, balance: 9029 },
-  { id: 7, accountNo: "770", customerNameEn: "Ahsan Kargar Mandi", customerNameUr: "احسن کارگر منڈی", area: "منڈی", phone: "0311-3344556", lastPaymentDate: new Date(today.getTime() - 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], freshDebt: 2376, freshReceipt: 0, balance: 2376 },
-  { id: 8, accountNo: "354", customerNameEn: "Ahmed Dawar Mandi", customerNameUr: "احمد داور منڈی", area: "منڈی", phone: "0322-4455667", lastPaymentDate: new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], freshDebt: 53743, freshReceipt: 0, balance: 53743 },
-];
-
 export default function WasoliReportPage() {
   const [filter, setFilter] = useState<"all" | "normal" | "3days" | "7days" | "30days">("all");
-  const [dateFilter, setDateFilter] = useState<string>("");
+  const [dateFilter, setDateFilter] = useState<string>(new Date().toISOString().split("T")[0]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [bills, setBills] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [custRes, billsRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/customers`).catch(() => null),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bills`).catch(() => null)
+        ]);
+
+        if (custRes && custRes.ok) {
+          const custData = await custRes.json();
+          if (custData.success) {
+            setCustomers(custData.data);
+          }
+        }
+        if (billsRes && billsRes.ok) {
+          const billsData = await billsRes.json();
+          if (billsData.success) {
+            setBills(billsData.data);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const handlePrint = () => {
     window.print();
@@ -90,14 +110,66 @@ export default function WasoliReportPage() {
     }, 300);
   };
 
+  const today = new Date();
   const calculateDaysAgo = (dateStr: string) => {
+    if (!dateStr) return 0;
     const pastDate = new Date(dateStr);
     const timeDiff = today.getTime() - pastDate.getTime();
     return Math.floor(timeDiff / (1000 * 3600 * 24));
   };
 
+  const compiledData = useMemo(() => {
+    const recordsMap = new Map<string, WasoliRecord>();
+    
+    // Initialize with customers
+    customers.forEach((c: any) => {
+      recordsMap.set(c.code, {
+        id: c._id || Math.random(),
+        accountNo: c.code,
+        customerNameEn: c.nameEnglish || "",
+        customerNameUr: c.nameUrdu || "",
+        area: c.address || "نامعلوم",
+        phone: c.phone || "",
+        lastPaymentDate: new Date().toISOString().split("T")[0],
+        previousBalance: Number(c.openingBalance) || 0,
+        freshDebt: 0,
+        freshReceipt: 0,
+        balance: 0,
+      } as any);
+    });
+
+    // Add fresh debts from bills based on selected date
+    const targetDate = dateFilter || new Date().toISOString().split("T")[0];
+    
+    bills.forEach((b: any) => {
+      const bDate = b.date ? b.date.split("T")[0] : "";
+      if (bDate === targetDate && b.lineItems && Array.isArray(b.lineItems)) {
+        b.lineItems.forEach((li: any) => {
+          if (li.customer && li.customer.code) {
+            const code = li.customer.code;
+            if (recordsMap.has(code)) {
+              const record = recordsMap.get(code)!;
+              const amount = Number(li.amount) || 0;
+              const commPct = Number(li.commissionPct) || 0;
+              const totalAmount = amount + (amount * (commPct / 100));
+              record.freshDebt += totalAmount;
+            }
+          }
+        });
+      }
+    });
+
+    // Calculate final balances
+    const finalRecords = Array.from(recordsMap.values());
+    finalRecords.forEach(r => {
+      r.balance = (r as any).previousBalance + r.freshDebt - r.freshReceipt;
+    });
+
+    return finalRecords;
+  }, [customers, bills, dateFilter]);
+
   const filteredData = useMemo(() => {
-    return mockData.filter((record) => {
+    return compiledData.filter((record) => {
       const daysAgo = calculateDaysAgo(record.lastPaymentDate);
       
       // Filter by days
@@ -106,29 +178,30 @@ export default function WasoliReportPage() {
       if (filter === "7days" && (daysAgo < 7 || daysAgo >= 30)) return false;
       if (filter === "30days" && daysAgo < 30) return false;
 
-      // Filter by explicit Date Picker
-      if (dateFilter && record.lastPaymentDate !== dateFilter) {
-        return false;
-      }
-
       // Filter by search
       const searchStr = searchTerm.toLowerCase();
       if (searchTerm && !record.customerNameEn.toLowerCase().includes(searchStr) && !record.customerNameUr.includes(searchStr) && !record.accountNo.includes(searchStr)) {
         return false;
       }
+      
+      // Only show customers that have some activity or balance
+      if ((record as any).previousBalance === 0 && record.freshDebt === 0 && record.balance === 0) {
+          return false;
+      }
 
       return true;
     });
-  }, [filter, searchTerm]);
+  }, [compiledData, filter, searchTerm]);
 
   // Group by Area
   const groupedData = useMemo(() => {
     const groups: { [key: string]: WasoliRecord[] } = {};
     filteredData.forEach(record => {
-      if (!groups[record.area]) {
-        groups[record.area] = [];
+      const area = record.area || "نامعلوم";
+      if (!groups[area]) {
+        groups[area] = [];
       }
-      groups[record.area].push(record);
+      groups[area].push(record);
     });
     return groups;
   }, [filteredData]);
@@ -242,12 +315,12 @@ export default function WasoliReportPage() {
                       
                       <div className="grid grid-cols-2 gap-2 text-sm mt-2">
                         <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded">
-                          <span className="block text-xs font-urdu text-slate-500">تازہ نام (Debt)</span>
-                          <span className="font-bold">{record.freshDebt.toLocaleString()}</span>
+                          <span className="block text-xs font-urdu text-slate-500">پچھلا بیلنس (Prev)</span>
+                          <span className="font-bold">{(record as any).previousBalance.toLocaleString()}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded">
-                          <span className="block text-xs font-urdu text-slate-500">تازہ وصولی (Receipt)</span>
-                          <span className="font-bold">{record.freshReceipt.toLocaleString()}</span>
+                          <span className="block text-xs font-urdu text-slate-500">تازہ نام (Debt)</span>
+                          <span className="font-bold">{record.freshDebt.toLocaleString()}</span>
                         </div>
                       </div>
 
@@ -272,7 +345,7 @@ export default function WasoliReportPage() {
               <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase text-xs border-b-2 border-slate-300 dark:border-slate-600">
                 <th className="p-3 border-l border-slate-300 dark:border-slate-700 text-center w-24">کھاتہ نمبر</th>
                 <th className="p-3 border-l border-slate-300 dark:border-slate-700">نام خریدار</th>
-                <th className="p-3 border-l border-slate-300 dark:border-slate-700 text-center">علاقہ / نام</th>
+                <th className="p-3 border-l border-slate-300 dark:border-slate-700 text-center">پچھلا بیلنس</th>
                 <th className="p-3 border-l border-slate-300 dark:border-slate-700 text-center">تازہ نام</th>
                 <th className="p-3 border-l border-slate-300 dark:border-slate-700 text-center">تازہ وصولی</th>
                 <th className="p-3 text-center text-sm">بقایا بیلنس</th>
@@ -305,16 +378,16 @@ export default function WasoliReportPage() {
                             <td className="p-2 border-l border-slate-200 dark:border-slate-700">
                               <div className="font-urdu text-sm">{record.customerNameUr}</div>
                             </td>
-                            <td className="p-2 border-l border-slate-200 dark:border-slate-700 text-center font-urdu text-sm">
-                              {record.area}
+                            <td className="p-2 border-l border-slate-200 dark:border-slate-700 text-center font-mono text-sm font-bold">
+                              {(record as any).previousBalance.toLocaleString()}
                             </td>
-                            <td className="p-2 border-l border-slate-200 dark:border-slate-700 text-center font-mono text-sm">
+                            <td className="p-2 border-l border-slate-200 dark:border-slate-700 text-center font-mono text-sm font-bold">
                               {record.freshDebt > 0 ? record.freshDebt.toLocaleString() : ""}
                             </td>
-                            <td className="p-2 border-l border-slate-200 dark:border-slate-700 text-center font-mono text-sm">
-                              {record.freshReceipt > 0 ? record.freshReceipt.toLocaleString() : "0"}
+                            <td className="p-2 border-l border-slate-200 dark:border-slate-700 text-center font-mono text-sm font-bold">
+                              {record.freshReceipt > 0 ? record.freshReceipt.toLocaleString() : ""}
                             </td>
-                            <td className="p-2 text-center font-mono text-base">
+                            <td className="p-2 text-center font-mono text-base font-bold">
                               {record.balance.toLocaleString()}
                             </td>
                           </tr>
@@ -327,6 +400,9 @@ export default function WasoliReportPage() {
                   <tr className="bg-[#083D77] text-white border-y-4 border-[#083D77]">
                     <td colSpan={3} className="p-3 border-l border-white/20 text-center font-urdu text-lg font-bold">
                       کل جمع / بقایا (Grand Total)
+                    </td>
+                    <td className="p-3 border-l border-white/20 text-center font-mono font-bold text-lg">
+                      {filteredData.reduce((sum, r) => sum + (r as any).previousBalance, 0).toLocaleString()}
                     </td>
                     <td className="p-3 border-l border-white/20 text-center font-mono font-bold text-lg">
                       {filteredData.reduce((sum, r) => sum + r.freshDebt, 0).toLocaleString()}
@@ -369,7 +445,7 @@ export default function WasoliReportPage() {
             <tr className="border-b border-black bg-gray-50">
               <th className="border border-black px-2 py-1 text-center w-16">کھاتہ نمبر</th>
               <th className="border border-black px-2 py-1 text-center">نام خریدار</th>
-              <th className="border border-black px-2 py-1 text-center">علاقہ / نام</th>
+              <th className="border border-black px-2 py-1 text-center">پچھلا بیلنس</th>
               <th className="border border-black px-2 py-1 text-center">تازہ نام</th>
               <th className="border border-black px-2 py-1 text-center">تازہ وصولی</th>
               <th className="border border-black px-2 py-1 text-center">بقایا بیلنس</th>
@@ -397,8 +473,8 @@ export default function WasoliReportPage() {
                         <td className="border border-black px-2 py-1 text-center">
                           {record.customerNameUr}
                         </td>
-                        <td className="border border-black px-2 py-1 text-center">
-                          {record.area}
+                        <td className="border border-black px-2 py-1 text-center font-mono font-bold">
+                          {(record as any).previousBalance.toLocaleString()}
                         </td>
                         <td className="border border-black px-2 py-1 text-center font-mono font-bold">
                           {record.freshDebt > 0 ? record.freshDebt.toLocaleString() : ""}
@@ -418,6 +494,9 @@ export default function WasoliReportPage() {
                 <tr className="border-t-[3px] border-black">
                   <td colSpan={3} className="border border-black px-2 py-1 text-center font-bold text-lg bg-gray-100">
                     کل جمع / بقایا
+                  </td>
+                  <td className="border border-black px-2 py-1 text-center font-mono font-bold text-lg bg-gray-100">
+                    {filteredData.reduce((sum, r) => sum + (r as any).previousBalance, 0).toLocaleString()}
                   </td>
                   <td className="border border-black px-2 py-1 text-center font-mono font-bold text-lg bg-gray-100">
                     {filteredData.reduce((sum, r) => sum + r.freshDebt, 0).toLocaleString()}

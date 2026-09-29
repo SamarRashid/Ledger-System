@@ -5,48 +5,100 @@ import {
   ClipboardList, 
   Calendar,
   CheckCircle,
-  FileText
+  FileText,
+  User,
+  Users
 } from "lucide-react";
-
-interface KatchaChithaRecord {
-  id: number;
-  date: string;
-  customerCode: string;
-  customerNameUrdu: string;
-  customerNameEnglish: string;
-  transactionType: "receipt" | "payment";
-  amount: number;
-  commission?: number;
-  netAmount?: number;
-  description: string;
-  items?: any[];
-}
 
 export default function KatchaChithaPage(): React.JSX.Element {
   const [date, setDate] = useState<string>(new Date().toISOString().split("T")[0]);
-  const [records, setRecords] = useState<KatchaChithaRecord[]>([]);
+  const [bills, setBills] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const existingStr = localStorage.getItem("katcha_chitha_records");
-    if (existingStr) {
+    const fetchBills = async () => {
       try {
-        setRecords(JSON.parse(existingStr));
-      } catch (e) {}
-    }
+        setLoading(true);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bills`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.data)) {
+            setBills(data.data);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch bills", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBills();
   }, []);
 
-  const filteredRecords = useMemo(() => {
-    return records.filter((r) => r.date === date);
-  }, [records, date]);
+  const filteredBills = useMemo(() => {
+    return bills.filter((b) => b.date && b.date.split("T")[0] === date);
+  }, [bills, date]);
 
   // Calculate totals
-  const totalReceipts = filteredRecords
-    .filter((r) => r.transactionType === "receipt")
-    .reduce((sum, r) => sum + r.amount, 0);
+  let totalReceipts = 0; // Total Debit (Sales)
+  let totalPayments = 0; // Total Credit (Supplier Payments)
 
-  const totalPayments = filteredRecords
-    .filter((r) => r.transactionType === "payment")
-    .reduce((sum, r) => sum + r.amount, 0);
+  filteredBills.forEach(bill => {
+    if (bill.totals?.netTotal) {
+      totalPayments += bill.totals.netTotal;
+    }
+    if (bill.lineItems && Array.isArray(bill.lineItems)) {
+      bill.lineItems.forEach((li: any) => {
+        const amount = Number(li.amount) || 0;
+        const commPct = Number(li.commissionPct) || 0;
+        totalReceipts += amount + (amount * (commPct / 100));
+      });
+    }
+  });
+
+  // Group by Supplier (Beopari)
+  const groupedBySupplier = useMemo(() => {
+    const map = new Map<string, {
+      beopari: any;
+      totalCredit: number;
+      billsCount: number;
+      customersMap: Map<string, { customer: any; amount: number; commission: number; items: any[] }>;
+    }>();
+
+    filteredBills.forEach(bill => {
+      const beopariCode = bill.beopari?.code || "UNKNOWN";
+      
+      if (!map.has(beopariCode)) {
+        map.set(beopariCode, {
+          beopari: bill.beopari,
+          totalCredit: 0,
+          billsCount: 0,
+          customersMap: new Map()
+        });
+      }
+
+      const supplierGroup = map.get(beopariCode)!;
+      supplierGroup.totalCredit += (bill.totals?.netTotal || 0);
+      supplierGroup.billsCount += 1;
+
+      if (bill.lineItems && Array.isArray(bill.lineItems)) {
+        bill.lineItems.forEach((li: any) => {
+          const custCode = li.customer ? li.customer.code : "UNKNOWN";
+          if (!supplierGroup.customersMap.has(custCode)) {
+            supplierGroup.customersMap.set(custCode, { customer: li.customer, amount: 0, commission: 0, items: [] });
+          }
+          const cGroup = supplierGroup.customersMap.get(custCode)!;
+          const amount = Number(li.amount) || 0;
+          const commPct = Number(li.commissionPct) || 0;
+          cGroup.amount += amount;
+          cGroup.commission += amount * (commPct / 100);
+          cGroup.items.push(li);
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [filteredBills]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8 animate-in fade-in duration-500 pb-12">
@@ -76,109 +128,152 @@ export default function KatchaChithaPage(): React.JSX.Element {
             <span className="font-urdu font-normal text-slate-500 dark:text-slate-400 text-sm">(آج کے بلز)</span>
           </h2>
           <span className="text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-600">
-            Total Entries: {filteredRecords.length}
+            Total Bills: {filteredBills.length}
           </span>
         </div>
 
-        {filteredRecords.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-12 text-slate-400 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 space-y-2">
+            <FileText className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600 animate-pulse" />
+            <p className="text-sm font-bold text-slate-600 dark:text-slate-400">Loading records... (لوڈ ہو رہا ہے)</p>
+          </div>
+        ) : groupedBySupplier.length === 0 ? (
           <div className="text-center py-12 text-slate-400 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 space-y-2">
             <FileText className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600" />
             <p className="text-sm font-bold text-slate-600 dark:text-slate-400">کوئی ریکارڈ نہیں ملا</p>
             <p className="text-xs text-slate-500">بلنگ انوائس سکرین سے بل محفوظ کرنے پر یہاں نظر آئیں گے۔</p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {filteredRecords.map((record, index) => (
-              <div key={record.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm transition-all hover:shadow-md">
-                
-                {/* Card Header */}
-                <div className="bg-slate-50 dark:bg-slate-700/30 p-4 border-b border-slate-200 dark:border-slate-700 flex flex-wrap justify-between items-center gap-4">
-                  <div className="flex items-center gap-4">
-                    <span className="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-slate-500 dark:text-slate-300 font-bold text-xs">
-                      {filteredRecords.length - index}
-                    </span>
-                    <div>
-                      <h3 className="font-urdu font-bold text-lg text-slate-900 dark:text-white">
-                        {record.customerNameUrdu} <span className="text-sm font-sans text-slate-500">({record.customerCode})</span>
-                      </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-urdu">{record.description}</p>
+          <div className="space-y-8">
+            {groupedBySupplier.map((supplierGroup, index) => {
+              const customersList = Array.from(supplierGroup.customersMap.values());
+
+              return (
+                <div key={supplierGroup.beopari?.code || index} className="bg-white dark:bg-slate-800 border-2 border-rose-200 dark:border-rose-900/50 rounded-2xl overflow-hidden shadow-sm transition-all hover:shadow-md">
+                  
+                  {/* MAIN SUPPLIER HEADER (BEOPARI / CREDIT) */}
+                  <div className="bg-rose-50 dark:bg-rose-900/20 p-5 border-b border-rose-200 dark:border-rose-900/50 flex flex-wrap justify-between items-center gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-xl bg-rose-200 dark:bg-rose-800/50 flex items-center justify-center text-rose-700 dark:text-rose-400">
+                        <User className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold bg-rose-200/50 dark:bg-rose-800/50 text-rose-700 dark:text-rose-300 px-2 py-0.5 rounded">Supplier (بیوپاری)</span>
+                          <span className="text-xs font-bold text-slate-500">{supplierGroup.billsCount} Bills</span>
+                        </div>
+                        <h3 className="font-urdu font-bold text-xl text-slate-900 dark:text-white">
+                          {supplierGroup.beopari?.nameUrdu || "Unknown"} <span className="text-sm font-sans text-slate-500">({supplierGroup.beopari?.code || "-"})</span>
+                        </h3>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-6">
+                      <div className="px-4 py-2 rounded-xl font-bold font-urdu text-[14px] bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-900/40 dark:text-rose-300 dark:border-rose-700">
+                        ادائیگی (Credit)
+                      </div>
+                      <div className="text-right">
+                        <span className="block text-[11px] uppercase font-bold text-rose-500 dark:text-rose-400">Supplier Net Total</span>
+                        <span className="font-mono font-black text-2xl text-rose-700 dark:text-rose-400">
+                          RS {supplierGroup.totalCredit.toLocaleString()}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-6">
-                    <div className={`px-4 py-1.5 leading-relaxed rounded-lg font-bold font-urdu text-[13px] border ${
-                      record.transactionType === "receipt" 
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/50" 
-                        : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800/50"
-                    }`}>
-                      {record.transactionType === "receipt" ? "خریداری (Debit)" : "ادائیگی (Credit)"}
-                    </div>
-                    <div className="text-right">
-                      <span className="block text-[10px] uppercase font-bold text-slate-400">Total Amount</span>
-                      <span className={`font-mono font-black text-xl ${record.transactionType === "receipt" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                        RS {record.amount.toLocaleString()}
-                      </span>
-                    </div>
+
+                  {/* CUSTOMERS SECTION (DEBIT) */}
+                  <div className="p-5 space-y-5 bg-slate-50/50 dark:bg-slate-800/50">
+                    <h4 className="font-bold text-slate-600 dark:text-slate-400 flex items-center gap-2 text-sm uppercase tracking-wider mb-2">
+                      <Users className="h-4 w-4" /> 
+                      Associated Customers (خریدار)
+                    </h4>
+                    
+                    {customersList.length === 0 ? (
+                      <div className="text-center p-4 text-slate-400 text-sm font-bold">No customers associated with this bill.</div>
+                    ) : (
+                      customersList.map((ct, cIdx) => (
+                        <div key={cIdx} className="bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-800/30 rounded-xl overflow-hidden shadow-sm">
+                          
+                          {/* Customer Header */}
+                          <div className="bg-emerald-50/80 dark:bg-emerald-900/10 p-3 px-4 border-b border-emerald-100 dark:border-emerald-800/30 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                              <span className="h-6 w-6 rounded-full bg-emerald-200 dark:bg-emerald-800 flex items-center justify-center text-emerald-700 dark:text-emerald-300 font-bold text-xs">
+                                {cIdx + 1}
+                              </span>
+                              <h3 className="font-urdu font-bold text-base text-slate-800 dark:text-emerald-50">
+                                {ct.customer?.nameUrdu || "نامعلوم"} <span className="text-xs font-sans text-slate-500">({ct.customer?.code || "-"})</span>
+                              </h3>
+                            </div>
+                            
+                            <div className="flex items-center gap-4">
+                              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/50 px-2 py-1 rounded">خریداری (Debit)</span>
+                            </div>
+                          </div>
+
+                          {/* Customer Items Table */}
+                          <div className="p-0 overflow-x-auto">
+                            <table className="w-full text-sm text-right" dir="rtl">
+                              <thead className="bg-[#083D77]/5 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700/50">
+                                <tr>
+                                  <th className="p-2 font-bold text-xs text-center">تفصیل اشیاء (Item)</th>
+                                  <th className="p-2 font-bold text-xs text-center">پیکنگ (Bags)</th>
+                                  <th className="p-2 font-bold text-xs text-center">وزن کلو (Weight)</th>
+                                  <th className="p-2 font-bold text-xs text-center">ریٹ (Rate)</th>
+                                  <th className="p-2 font-bold text-xs text-center text-[#083D77] dark:text-blue-400">رقم (Total)</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/30">
+                                {ct.items.map((item: any, i: number) => (
+                                  <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/20">
+                                    <td className="p-2 font-urdu text-slate-700 dark:text-slate-300 text-center font-medium">{item.item}</td>
+                                    <td className="p-2 text-center text-slate-500 dark:text-slate-400">{item.bags || "-"}</td>
+                                    <td className="p-2 text-center font-bold text-slate-600 dark:text-slate-300">{item.weight}</td>
+                                    <td className="p-2 text-center font-bold text-cyan-600 dark:text-cyan-400">{item.rate}</td>
+                                    <td className="p-2 text-center font-mono font-bold text-slate-800 dark:text-slate-200">{Number(item.amount).toLocaleString()}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            
+                            {/* Customer Footer Totals */}
+                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 border-t border-slate-100 dark:border-slate-700/50 flex justify-end gap-8 text-sm font-mono">
+                              <div className="flex gap-2 text-slate-500 items-center">
+                                <span className="font-urdu font-bold">رقم:</span>
+                                <span className="font-bold">{ct.amount.toLocaleString()}</span>
+                              </div>
+                              <div className="flex gap-2 text-slate-500 items-center">
+                                <span className="font-urdu font-bold text-2xl">+</span>
+                              </div>
+                              <div className="flex gap-2 text-slate-500 items-center">
+                                <span className="font-urdu font-bold">کمیشن:</span>
+                                <span className="font-bold">{ct.commission.toLocaleString()}</span>
+                              </div>
+                              <div className="flex gap-2 text-slate-500 items-center">
+                                <span className="font-urdu font-bold text-2xl">=</span>
+                              </div>
+                              <div className="flex gap-2 text-emerald-600 dark:text-emerald-400 items-center bg-emerald-100 dark:bg-emerald-900/30 px-3 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800/50">
+                                <span className="font-urdu font-bold text-base">کل نام:</span>
+                                <span className="font-black text-lg">RS {(ct.amount + ct.commission).toLocaleString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
-
-                {/* Card Body: Items Table (If exists) */}
-                {record.items && record.items.length > 0 && (
-                  <div className="p-0 overflow-x-auto">
-                    <table className="w-full text-sm text-right" dir="rtl">
-                      <thead className="bg-[#083D77]/5 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
-                        <tr>
-                          <th className="p-3 font-bold text-xs w-10 text-center">#</th>
-                          <th className="p-3 font-bold text-xs">تفصیل اشیاء (Item)</th>
-                          <th className="p-3 font-bold text-xs text-center">پیکنگ (Bags)</th>
-                          <th className="p-3 font-bold text-xs text-center">وزن کلو (Weight)</th>
-                          <th className="p-3 font-bold text-xs text-center">ریٹ (Rate)</th>
-                          <th className="p-3 font-bold text-xs text-center text-[#083D77] dark:text-blue-400">رقم (Total)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                        {record.items.map((item: any, i: number) => (
-                          <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/20">
-                            <td className="p-3 text-center text-xs font-bold text-slate-400">{i + 1}</td>
-                            <td className="p-3 font-urdu text-slate-800 dark:text-slate-200 font-medium">{item.item}</td>
-                            <td className="p-3 text-center text-slate-600 dark:text-slate-400">{item.bags || "-"}</td>
-                            <td className="p-3 text-center font-bold text-slate-700 dark:text-slate-300">{item.weight}</td>
-                            <td className="p-3 text-center font-bold text-cyan-600 dark:text-cyan-400">{item.rate}</td>
-                            <td className="p-3 text-center font-mono font-bold text-slate-900 dark:text-white">{item.amount.toLocaleString()}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    
-                    {/* Bill Summary Footer */}
-                    <div className="bg-slate-50 dark:bg-slate-800/50 p-4 border-t border-slate-200 dark:border-slate-700 flex flex-col items-end gap-1 font-mono text-sm">
-                      <div className="flex justify-between w-48 text-slate-600 dark:text-slate-400">
-                        <span className="font-urdu font-bold">کل رقم (Gross):</span>
-                        <span>{record.amount.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between w-48 text-slate-600 dark:text-slate-400">
-                        <span className="font-urdu font-bold">کمیشن (Commission):</span>
-                        <span>{(record.commission || 0).toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between w-48 pt-2 mt-1 border-t border-slate-200 dark:border-slate-700 font-bold text-base text-slate-900 dark:text-white">
-                        <span className="font-urdu">خالص بل (Net Total):</span>
-                        <span className="text-emerald-600 dark:text-emerald-400">{(record.netAmount || record.amount).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
             
-            {/* Totals Section */}
-            <div className="bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-               <div className="flex justify-between items-center p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-lg border border-emerald-100 dark:border-emerald-800">
-                  <span className="font-urdu font-bold text-emerald-800 dark:text-emerald-400">کل خریداری (Total Sales/Debit):</span>
-                  <span className="font-mono font-black text-emerald-600 dark:text-emerald-400 text-lg">RS {totalReceipts.toLocaleString()}</span>
+            {/* GRAND TOTALS SECTION */}
+            <div className="bg-slate-50 dark:bg-slate-800/80 border-t-4 border-slate-200 dark:border-slate-700 p-5 grid grid-cols-1 md:grid-cols-2 gap-4 rounded-b-xl">
+               <div className="flex justify-between items-center p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-200 dark:border-emerald-800/50 shadow-sm">
+                  <span className="font-urdu font-bold text-emerald-800 dark:text-emerald-400 text-lg">کل خریداری (Total Sales/Debit):</span>
+                  <span className="font-mono font-black text-emerald-600 dark:text-emerald-400 text-2xl">RS {totalReceipts.toLocaleString()}</span>
                </div>
-               <div className="flex justify-between items-center p-3 bg-rose-50 dark:bg-rose-900/10 rounded-lg border border-rose-100 dark:border-rose-800">
-                  <span className="font-urdu font-bold text-rose-800 dark:text-rose-400">کل بیوپاری بل (Total Supplier Credit):</span>
-                  <span className="font-mono font-black text-rose-600 dark:text-rose-400 text-lg">RS {totalPayments.toLocaleString()}</span>
+               <div className="flex justify-between items-center p-4 bg-rose-50 dark:bg-rose-900/10 rounded-xl border border-rose-200 dark:border-rose-800/50 shadow-sm">
+                  <span className="font-urdu font-bold text-rose-800 dark:text-rose-400 text-lg">کل بیوپاری بل (Total Supplier Credit):</span>
+                  <span className="font-mono font-black text-rose-600 dark:text-rose-400 text-2xl">RS {totalPayments.toLocaleString()}</span>
                </div>
             </div>
           </div>
