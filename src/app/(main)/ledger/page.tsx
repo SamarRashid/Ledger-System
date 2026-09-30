@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Printer, Search, ArrowRight } from "lucide-react";
-import { Account } from "@/components/AccountSearchModal";
+import { AccountSearchModal, Account } from "@/components/AccountSearchModal";
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface Transaction {
@@ -18,52 +18,7 @@ interface TransactionWithBalance extends Transaction {
   balance: number;
 }
 
-// Mock Transactions
-const MOCK_TRANSACTIONS: Transaction[] = [
-  {
-    id: 1,
-    date: "2026-09-10",
-    billNo: "1001",
-    description:
-      "دیسی گندم - 12 بوریاں - 150 کلوگرام",
-    debit: 3150,
-    credit: 0,
-  },
-  {
-    id: 2,
-    date: "2026-09-12",
-    billNo: "-",
-    description: "کیش وصولی (نقدی جمع کروائی)",
-    debit: 0,
-    credit: 2000,
-  },
-  {
-    id: 3,
-    date: "2026-09-15",
-    billNo: "1045",
-    description:
-      "سپر باسمتی چاول - 50 بوریاں - 2500 کلوگرام",
-    debit: 375000,
-    credit: 0,
-  },
-  {
-    id: 4,
-    date: "2026-09-16",
-    billNo: "-",
-    description: "نام ادائیگی (مزدوری اور کرایہ)",
-    debit: 0,
-    credit: 5000,
-  },
-  {
-    id: 5,
-    date: "2026-09-17",
-    billNo: "1080",
-    description:
-      "مکئی - 20 بوریاں - 1000 کلوگرام",
-    debit: 45000,
-    credit: 0,
-  },
-];
+
 
 export default function LedgerPage() {
   const [fromDate, setFromDate] = useState<string>("2026-09-01");
@@ -71,63 +26,129 @@ export default function LedgerPage() {
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<string | number>("");
-  const [accountSearch, setAccountSearch] = useState<string>("");
-  const [showAccountDropdown, setShowAccountDropdown] = useState<boolean>(false);
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
+
+  const [allBills, setAllBills] = useState<any[]>([]);
+  const [allReceipts, setAllReceipts] = useState<any[]>([]);
+  const [allPayments, setAllPayments] = useState<any[]>([]);
+  const [voucherType, setVoucherType] = useState<string>("All Vouchers");
+  const [isThermalPrint, setIsThermalPrint] = useState<boolean>(false);
 
   const [printedDate, setPrintedDate] = useState<string>("");
 
   useEffect(() => {
     setPrintedDate(new Date().toLocaleDateString());
     
-    const fetchAccounts = async () => {
+    const fetchData = async () => {
       try {
-        const [customersRes, suppliersRes] = await Promise.all([
+        const [customersRes, suppliersRes, billsRes, receiptsRes, paymentsRes] = await Promise.all([
           fetch(`${API_URL}/api/customers`).catch(() => null),
-          fetch(`${API_URL}/api/suppliers`).catch(() => null)
+          fetch(`${API_URL}/api/suppliers`).catch(() => null),
+          fetch(`${API_URL}/api/bills`).catch(() => null),
+          fetch(`${API_URL}/api/receipts`).catch(() => null),
+          fetch(`${API_URL}/api/payments`).catch(() => null)
         ]);
 
         const customersData = customersRes ? await customersRes.json() : { data: [] };
         const suppliersData = suppliersRes ? await suppliersRes.json() : { data: [] };
+        const billsData = billsRes ? await billsRes.json() : { data: [] };
+        const receiptsData = receiptsRes ? await receiptsRes.json() : { data: [] };
+        const paymentsData = paymentsRes ? await paymentsRes.json() : { data: [] };
 
         const formattedCustomers: Account[] = (customersData.data || []).map((c: any) => ({
-          id: c.id,
+          id: c.id || c._id,
           code: c.code,
           nameUrdu: c.nameUrdu,
           marka: "",
           subGroup: "گاہک",
           nameEnglish: c.nameEnglish,
+          openingBalance: c.openingBalance || 0
         }));
 
-        const formattedSuppliers: Account[] = (suppliersData.data || []).map((s: any) => ({
-          id: s.id,
-          code: s.code,
-          nameUrdu: s.nameUrdu,
-          marka: "",
-          subGroup: "بیوپاری",
-          nameEnglish: s.nameEnglish,
-        }));
+        setAccounts(formattedCustomers); // ONLY customers
 
-        const allAccounts = [...formattedCustomers, ...formattedSuppliers];
-        setAccounts(allAccounts);
-        if (allAccounts.length > 0) {
-           setSelectedCustomer(allAccounts[0].id);
-           setAccountSearch(`${allAccounts[0].nameUrdu} (${allAccounts[0].code}) - ${allAccounts[0].nameEnglish}`);
-        }
+        setAllBills(billsData.data || []);
+        setAllReceipts(receiptsData.data || []);
+        setAllPayments(paymentsData.data || []);
+
       } catch (e) {
          console.error(e);
       }
     };
-    fetchAccounts();
+    fetchData();
   }, []);
 
   const handlePrint = (): void => {
     window.print();
   };
 
-  let currentBalance = 0;
+    const customer = accounts.find(
+    (account) => account.id === selectedCustomer || String(account.id) === String(selectedCustomer)
+  );
+
+  let currentBalance = customer ? (customer.openingBalance || 0) : 0;
+  
+  // Combine all transactions for this customer
+  let allTx: Transaction[] = [];
+  
+  if (customer && voucherType !== "Receipts (وصولی)") {
+    // Add Bills (Sales)
+    allBills.forEach(b => {
+      let customerTotal = 0;
+      let items: string[] = [];
+      if (b.lineItems) {
+        b.lineItems.forEach((li: any) => {
+          if (li.customer && (li.customer.id === customer.id || li.customer._id === customer.id)) {
+            const amount = li.amount || 0;
+            const comm = amount * ((Number(li.commissionPct) || 0) / 100);
+            customerTotal += (amount + comm);
+            items.push(li.item);
+          }
+        });
+      }
+      
+      if (customerTotal > 0) {
+        allTx.push({
+          id: b.id || b._id,
+          date: b.date,
+          billNo: b.billNo,
+          description: items.length > 0 ? items.join("، ") : `بل نمبر ${b.billNo}`,
+          debit: customerTotal,
+          credit: 0
+        });
+      }
+    });
+  }
+
+  if (customer && voucherType !== "Sales (سیلز)") {
+    // Add Receipts
+    allReceipts.forEach(r => {
+      if (r.customer && (r.customer.id === customer.id || r.customer._id === customer.id)) {
+        allTx.push({
+          id: r.id || r._id,
+          date: r.date,
+          billNo: r.receiptNo,
+          description: `وصولی - ${r.note || ""}`,
+          debit: 0,
+          credit: r.amount || 0
+        });
+      }
+    });
+  }
+  
+  // Sort by date
+  allTx.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  // Filter by date range
+  if (fromDate) {
+    allTx = allTx.filter(tx => new Date(tx.date) >= new Date(fromDate));
+  }
+  if (toDate) {
+    allTx = allTx.filter(tx => new Date(tx.date) <= new Date(toDate));
+  }
 
   const transactionsWithBalance: TransactionWithBalance[] =
-    MOCK_TRANSACTIONS.map((tx: Transaction) => {
+    allTx.map((tx: Transaction) => {
       currentBalance = currentBalance + tx.debit - tx.credit;
 
       return {
@@ -136,38 +157,50 @@ export default function LedgerPage() {
       };
     });
 
-  const customer = accounts.find(
-    (account) => account.id === selectedCustomer || Number(account.id) === selectedCustomer
-  );
-
-  // Search account by Urdu name, English name, or code
-  const filteredAccounts = accounts.filter((account) => {
-    const search = accountSearch.toLowerCase().trim();
-
-    if (!search) return true;
-
-    return (
-      String(account.code).toLowerCase().includes(search) ||
-      String(account.nameEnglish).toLowerCase().includes(search) ||
-      String(account.nameUrdu).toLowerCase().includes(search)
-    );
-  });
+  
 
   const handleAccountSelect = (account: Account) => {
     setSelectedCustomer(account.id);
-
-    setAccountSearch(
-      `${account.nameUrdu} (${account.code}) - ${account.nameEnglish}`
-    );
-
-    setShowAccountDropdown(false);
+    setIsSearchOpen(false);
   };
 
   return (
     <div className="max-w-6xl mx-auto flex flex-col min-h-full pb-24">
+      <style dangerouslySetInnerHTML={{__html: `
+        @media print {
+          .print-thermal-mode {
+            width: 80mm !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+            font-size: 10px !important;
+          }
+          .print-thermal-mode h2 {
+            font-size: 14px !important;
+            text-align: center !important;
+          }
+          .print-thermal-mode table {
+            width: 100% !important;
+            font-size: 9px !important;
+          }
+          .print-thermal-mode th, .print-thermal-mode td {
+            padding: 2px !important;
+          }
+          .print-thermal-mode .print-footer {
+            display: none !important;
+          }
+          .print-thermal-mode .header-info {
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+          }
+          .print-thermal-mode .bg-cyan-50 {
+            background-color: transparent !important;
+          }
+        }
+      `}} />
 
       {/* Non-printable controls */}
-      <div className="print:hidden bg-white dark:bg-slate-800 p-4 md:p-6 rounded-xl shadow-sm border border-[#E2E8F0] dark:border-slate-700 space-y-5 transition-colors">
+      <div className="print:hidden bg-white dark:bg-slate-800 p-6 md:p-8 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 dark:border-slate-700 space-y-6 transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
 
@@ -181,7 +214,7 @@ export default function LedgerPage() {
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-3 focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4] outline-none bg-[#F8FAFC] dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm"
+              className="w-full border border-slate-200 dark:border-slate-600 rounded-xl p-3.5 focus:border-[#06b6d4] focus:ring-4 focus:ring-cyan-50 outline-none bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm transition-all"
             />
           </div>
 
@@ -195,25 +228,11 @@ export default function LedgerPage() {
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-3 focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4] outline-none bg-[#F8FAFC] dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm"
+              className="w-full border border-slate-200 dark:border-slate-600 rounded-xl p-3.5 focus:border-[#06b6d4] focus:ring-4 focus:ring-cyan-50 outline-none bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm transition-all"
             />
           </div>
 
-          {/* Agraee Group */}
-          <div className="md:col-span-6">
-            <label className="block text-xs font-bold text-[#0F172A] dark:text-slate-300 mb-1.5">
-              Agraee Group
-            </label>
-
-            <select
-              defaultValue="All Groups"
-              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-3 focus:border-[#06b6d4] outline-none bg-[#F8FAFC] dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm cursor-pointer"
-            >
-              <option>All Groups</option>
-              <option>Group A</option>
-              <option>Group B</option>
-            </select>
-          </div>
+          
 
           {/* Account */}
           <div className="md:col-span-6">
@@ -221,56 +240,17 @@ export default function LedgerPage() {
               Account (گاہک کھاتہ)
             </label>
 
-            <div className="relative">
-              <input
-                type="text"
-                value={accountSearch}
-                onChange={(e) => {
-                  setAccountSearch(e.target.value);
-                  setShowAccountDropdown(true);
-                }}
-                onFocus={() => setShowAccountDropdown(true)}
-                placeholder="Search account name or code..."
-                className="w-full pl-10 pr-3 py-3 border border-[#E2E8F0] dark:border-slate-600 rounded-lg focus:outline-none focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4] bg-[#F8FAFC] dark:bg-slate-700 font-urdu text-[#0F172A] dark:text-white text-base leading-relaxed"
+            <div className="flex relative w-full mt-1">
+              <div 
+                className="border border-slate-200 dark:border-slate-600 rounded-xl p-3.5 min-h-[50px] w-full bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-700 font-urdu font-bold cursor-pointer text-[#0F172A] dark:text-white text-base flex items-center whitespace-normal break-words pl-12 shadow-inner transition-colors"
+                onClick={() => setIsSearchOpen(true)}
                 dir="rtl"
-              />
-
-              <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
-
-              {showAccountDropdown && (
-                <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-
-                  {filteredAccounts.length > 0 ? (
-                    filteredAccounts.map((account) => (
-                      <button
-                        key={account.id}
-                        type="button"
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          handleAccountSelect(account);
-                        }}
-                        className="w-full text-start px-3 py-2.5 hover:bg-[#F1F5F9] dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-700 last:border-b-0 transition-colors"
-                      >
-                        <div
-                          className="font-urdu text-sm font-bold text-[#0F172A]"
-                          dir="rtl"
-                        >
-                          {account.nameUrdu}
-                        </div>
-
-                        <div className="text-xs text-slate-500 mt-0.5">
-                          {account.nameEnglish} ({account.code})
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-3 py-3 text-sm text-slate-500 text-center">
-                      No account found
-                    </div>
-                  )}
-
-                </div>
-              )}
+              >
+                {customer ? `${customer.code} - ${customer.nameUrdu}` : <span className="text-gray-400 font-normal text-sm">گاہک کا اکاؤنٹ تلاش کریں (Search Customer...)</span>}
+              </div>
+              <button onClick={() => setIsSearchOpen(true)} className="absolute left-0 top-0 bottom-0 bg-slate-100 dark:bg-slate-600 rounded-l-xl px-3.5 border-r border-slate-200 dark:border-slate-600 hover:bg-slate-200 transition-colors flex items-center justify-center">
+                <Search className="w-5 h-5 text-slate-500 dark:text-slate-300" />
+              </button>
             </div>
           </div>
 
@@ -295,14 +275,14 @@ export default function LedgerPage() {
             </label>
 
             <select
-              defaultValue="All Vouchers"
-              className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-3 focus:border-[#06b6d4] outline-none bg-[#F8FAFC] dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm cursor-pointer"
+              value={voucherType}
+              onChange={(e) => setVoucherType(e.target.value)}
+              className="w-full border border-slate-200 dark:border-slate-600 rounded-xl p-3.5 focus:border-[#06b6d4] focus:ring-4 focus:ring-cyan-50 outline-none bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm cursor-pointer transition-all"
             >
               <option>All Vouchers</option>
               <option>Sales (سیلز)</option>
               <option>Receipts (وصولی)</option>
-              <option>Payments (ادائیگی)</option>
-            </select>
+                          </select>
           </div>
 
           {/* Checkboxes */}
@@ -336,39 +316,53 @@ export default function LedgerPage() {
         </div>
       </div>
 
+      {!customer ? (
+        <div className="print:hidden mt-8 bg-white border border-slate-100 rounded-2xl p-16 flex flex-col items-center justify-center text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <div className="w-20 h-20 bg-cyan-50 rounded-full flex items-center justify-center mb-4">
+            <Search className="w-10 h-10 text-cyan-400" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">No Account Selected</h3>
+          <p className="text-slate-500 max-w-md font-urdu text-sm leading-relaxed">براہ کرم لیجر دیکھنے کے لیے اوپر دیے گئے سرچ بار سے کسی گاہک کا انتخاب کریں۔ (Please select a customer from the search bar above to view their ledger.)</p>
+        </div>
+      ) : (
+      <>
       {/* Printable Area */}
-      <div className="bg-white dark:bg-slate-800 p-4 md:p-8 rounded-xl shadow-sm border border-[#E2E8F0] dark:border-slate-700 print:border-none print:shadow-none print:p-0 mt-6 overflow-hidden transition-colors">
+      <div className={`bg-white dark:bg-slate-800 p-4 md:p-8 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 print:border-none print:shadow-none print:p-0 mt-6 overflow-hidden transition-colors ${isThermalPrint ? "print-thermal-mode" : ""}`}>
 
         {/* Print Header */}
         <div className="border-b-2 border-[#0F172A] dark:border-slate-600 pb-6 mb-6">
 
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 header-info">
 
             <div>
-              <h2 className="text-xl font-bold tracking-tight text-[#0F172A] dark:text-white text-start">
-                STATEMENT OF ACCOUNT (کھاتہ کی تفصیل)
-              </h2>
-
-              <div className="text-lg font-bold text-[#06b6d4] mt-1 text-start font-urdu">
-                {customer?.nameUrdu} - {customer?.nameEnglish}
+              <div className="flex flex-col gap-2">
+              <div className="inline-flex items-center gap-2 bg-[#064789] text-white px-4 py-1.5 rounded-full w-fit">
+                <span className="font-bold text-sm tracking-widest">STATEMENT OF ACCOUNT</span>
+                <span className="font-urdu text-xs opacity-90">(کھاتہ کی تفصیل)</span>
               </div>
-
-              <div className="text-xs font-bold text-slate-500 dark:text-slate-400 text-start mt-1">
-                Account Code (اکاؤنٹ کوڈ): {customer?.code}
+              <div className="text-2xl font-black text-slate-800 dark:text-white mt-2 text-start font-urdu flex items-center gap-3">
+                {customer?.nameUrdu} <span className="text-lg font-bold text-[#06b6d4] font-sans">{customer?.nameEnglish}</span>
               </div>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs font-bold border border-slate-200">
+                  Code: {customer?.code}
+                </span>
+                <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded text-xs font-bold border border-emerald-100">
+                  Active
+                </span>
+              </div>
+            </div>
             </div>
 
             <div className="text-left md:text-right text-xs space-y-1.5 text-slate-600 dark:text-slate-300 bg-[#F8FAFC] dark:bg-slate-700/50 p-3 rounded-lg border border-[#E2E8F0] dark:border-slate-700">
 
-              <div>
-                <span className="font-bold text-[#0F172A] dark:text-white">
+              <div className="flex items-center justify-end gap-1.5" dir="ltr">
+                <span className="font-bold text-[#0F172A] dark:text-white ml-2" dir="rtl">
                   Period (مدت):
-                </span>{" "}
-                {fromDate}
-
-                <ArrowRight className="inline h-3 w-3 mx-1 text-slate-400" />
-
-                {toDate}
+                </span>
+                <span>{fromDate ? fromDate.split('-').reverse().join('-') : ""}</span>
+                <ArrowRight className="w-3 h-3 text-slate-400 flex-shrink-0 mx-0.5" />
+                <span>{toDate ? toDate.split('-').reverse().join('-') : ""}</span>
               </div>
 
               <div>
@@ -390,41 +384,41 @@ export default function LedgerPage() {
         </div>
 
         {/* Ledger Table */}
-        <div className="overflow-x-auto rounded-lg border border-[#E2E8F0] dark:border-slate-700">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
 
           <table className="w-full text-left text-sm whitespace-nowrap font-medium text-slate-700 dark:text-slate-300">
 
             <thead>
-              <tr className="bg-[#F8FAFC] dark:bg-slate-700 border-b border-[#E2E8F0] dark:border-slate-600 text-[11px] uppercase font-bold text-[#0F172A] dark:text-slate-200">
+              <tr className="bg-slate-50 dark:bg-slate-700 border-b-2 border-slate-200 dark:border-slate-600 text-[11px] uppercase font-extrabold text-slate-500 tracking-wider">
 
-                <th className="py-3 px-4 text-start">
+                <th className="py-4 px-5 text-start">
                   Date (تاریخ)
                 </th>
 
-                <th className="py-3 px-4 text-center">
+                <th className="py-4 px-5 text-center">
                   Bill No (بل نمبر)
                 </th>
 
-                <th className="py-3 px-4 text-start">
+                <th className="py-4 px-5 text-start">
                   Description (تفصیل)
                 </th>
 
-                <th className="py-3 px-4 text-end text-red-500">
+                <th className="py-4 px-5 text-end text-red-500">
                   Debit RS (نام)
                 </th>
 
-                <th className="py-3 px-4 text-end text-[#06b6d4]">
+                <th className="py-4 px-5 text-end text-[#06b6d4]">
                   Credit RS (جمع)
                 </th>
 
-                <th className="py-3 px-4 text-end">
+                <th className="py-4 px-5 text-end">
                   Balance RS (بقیہ)
                 </th>
 
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700 bg-white">
 
               {transactionsWithBalance.map((tx) => (
                 <tr
@@ -432,32 +426,32 @@ export default function LedgerPage() {
                   className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                 >
 
-                  <td className="py-3 px-4 text-[#334155] dark:text-slate-300 text-start text-xs">
+                  <td className="py-4 px-5 text-[#334155] dark:text-slate-300 text-start text-xs">
                     {tx.date}
                   </td>
 
-                  <td className="py-3 px-4 font-bold text-[#0F172A] dark:text-white text-center text-xs">
+                  <td className="py-4 px-5 font-bold text-[#0F172A] dark:text-white text-center text-xs">
                     {tx.billNo || "-"}
                   </td>
 
                   {/* Description - text will wrap to next line */}
-                  <td className="py-3 px-4 font-bold text-[#0F172A] dark:text-white text-start text-xs font-urdu whitespace-normal break-words min-w-[250px] max-w-[500px]">
+                  <td className="py-4 px-5 font-bold text-[#0F172A] dark:text-white text-start text-xs font-urdu whitespace-normal break-words min-w-[250px] max-w-[500px]">
                     {tx.description}
                   </td>
 
-                  <td className="py-3 px-4 text-end text-red-500 font-bold text-xs">
+                  <td className="py-4 px-5 text-end text-red-500 font-bold text-xs">
                     {tx.debit > 0
                       ? tx.debit.toLocaleString()
                       : "-"}
                   </td>
 
-                  <td className="py-3 px-4 text-end text-[#06b6d4] font-bold text-xs">
+                  <td className="py-4 px-5 text-end text-[#06b6d4] font-bold text-xs">
                     {tx.credit > 0
                       ? tx.credit.toLocaleString()
                       : "-"}
                   </td>
 
-                  <td className="py-3 px-4 text-end font-black text-[#0F172A] dark:text-white text-xs bg-[#F8FAFC]/50 dark:bg-slate-800/50">
+                  <td className="py-4 px-5 text-end font-black text-[#0F172A] dark:text-white text-xs bg-[#F8FAFC]/50 dark:bg-slate-800/50">
                     {tx.balance.toLocaleString()}
                   </td>
 
@@ -467,18 +461,18 @@ export default function LedgerPage() {
             </tbody>
 
             <tfoot>
-              <tr className="bg-[#064789] text-white">
+              <tr className="bg-cyan-50/80 border-y-2 border-cyan-500">
 
                 <td
                   colSpan={2}
-                  className="py-4 px-4 text-end text-slate-300 text-xs font-bold"
+                  className="py-5 px-5 text-end text-slate-700 text-sm font-bold uppercase tracking-wider"
                 >
                   Closing Balance (اختتامی بیلنس):
                 </td>
 
                 <td
                   colSpan={3}
-                  className="py-4 px-4 text-end text-lg font-black text-[#06b6d4]"
+                  className="py-5 px-5 text-end text-xl font-black text-[#06b6d4]"
                 >
                   {currentBalance.toLocaleString()} RS
                 </td>
@@ -490,7 +484,7 @@ export default function LedgerPage() {
         </div>
 
         {/* Print Footer */}
-        <div className="hidden print:block mt-16 text-center text-xs text-slate-500 font-bold">
+        <div className="hidden print:block mt-16 text-center text-xs text-slate-500 font-bold print-footer">
 
           <p>
             Generated by LedgerSystem (لیجر سسٹم کی طرف سے تیار کردہ)
@@ -511,24 +505,24 @@ export default function LedgerPage() {
 
         <button
           type="button"
-          onClick={handlePrint}
-          className="bg-[#064789] hover:bg-[#064789]/90 text-white px-4 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
+          onClick={() => handlePrint()}
+          className="bg-gradient-to-r from-[#064789] to-[#06b6d4] hover:from-[#053a70] hover:to-[#0596b0] text-white px-8 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-[0_4px_14px_0_rgba(6,182,212,0.39)] hover:shadow-[0_6px_20px_rgba(6,182,212,0.23)] hover:-translate-y-0.5"
         >
           <Printer className="h-4 w-4" />
-          Print Special (پرنٹ سپیشل)
-        </button>
-
-        <button
-          type="button"
-          onClick={handlePrint}
-          className="bg-[#06b6d4] hover:bg-cyan-600 text-white px-6 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
-        >
-          <Printer className="h-4 w-4" />
-          Print (پرنٹ)
+          A4 Print (پرنٹ)
         </button>
 
       </div>
 
+      </>
+      )}
+
+      <AccountSearchModal 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
+        onSelect={handleAccountSelect}
+        typeFilter="گاہک"
+      />
     </div>
   );
 }

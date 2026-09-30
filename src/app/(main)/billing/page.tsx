@@ -6,10 +6,12 @@ import { cn } from "@/components/layout/Header";
 import { AccountSearchModal, Account } from "@/components/AccountSearchModal";
 import { ItemSearchModal } from "@/components/ItemSearchModal";
 import { ItemSizeSearchModal } from "@/components/ItemSizeSearchModal";
+import { ExpenseSearchModal, Expense } from "@/components/ExpenseSearchModal";
 
 type LineItem = {
   id: string;
   item: string;
+  itemSize?: string;
   bags: number;
   weight: number;
   rate: number;
@@ -53,6 +55,7 @@ export default function BillingPage() {
   const [showToast, setShowToast] = useState<boolean>(false);
   const [isItemSearchOpen, setIsItemSearchOpen] = useState<boolean>(false);
   const [isItemSizeSearchOpen, setIsItemSizeSearchOpen] = useState<boolean>(false);
+  const [isExpenseSearchOpen, setIsExpenseSearchOpen] = useState<boolean>(false);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Account | null>(null);
   
@@ -86,15 +89,31 @@ export default function BillingPage() {
 
   // Line Items State
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [addedExpenses, setAddedExpenses] = useState<Expense[]>([]);
+  const [dynamicDeductions, setDynamicDeductions] = useState<Record<string, number | "">>({});
 
   // Derived Values
   const totalWeight: number = lineItems.reduce((sum, li) => sum + li.weight, 0);
   const totalAmount: number = lineItems.reduce((sum, li) => sum + li.amount, 0);
   const totalCommission: number = lineItems.reduce((sum, li) => sum + (li.amount * ((Number(li.commissionPct) || 0) / 100)), 0); 
-  
-  const totalDeductions: number = Math.max(0, (Number(freight) || 0) + (Number(labor) || 0) + (Number(otherCharges) || 0));
-  const netTotal: number = Math.max(0, totalAmount - totalCommission - totalDeductions);
   const totalBags: number = lineItems.reduce((sum, li) => sum + (Number(li.bags) || 0), 0);
+  
+  // Calculate deductions dynamically
+  const getCalculatedExpense = (e: any) => {
+    if (dynamicDeductions[e._id] !== undefined && dynamicDeductions[e._id] !== "") return Number(dynamicDeductions[e._id]);
+    if (e.calculationType === 'Fixed') return Number(e.rate) || 0;
+    if (e.calculationType === 'Weight') return (Number(e.rate) || 0) * totalWeight;
+    if (e.calculationType === 'Percentage') return (totalAmount * (Number(e.rate) || 0)) / 100;
+    if (e.calculationType === 'Total') return (Number(e.rate) || 0) * totalBags;
+    return 0;
+  };
+
+  const sellerExpenses = addedExpenses.filter(e => e.sellerApplicable);
+  const buyerExpenses = addedExpenses.filter(e => e.buyerApplicable && !e.sellerApplicable);
+  
+  const totalDeductions: number = sellerExpenses.reduce((sum, e) => sum + getCalculatedExpense(e), 0);
+  const totalBuyerDeductions: number = buyerExpenses.reduce((sum, e) => sum + getCalculatedExpense(e), 0);
+  const netTotal: number = Math.max(0, totalAmount - totalCommission - totalDeductions);
   const averageWeight: number | string = totalWeight > 0 ? (totalAmount / totalWeight).toFixed(2) : 0;
 
   const handleAddLineItem = () => {
@@ -135,6 +154,8 @@ export default function BillingPage() {
     setBags("");
     setWeight("");
     setRate("");
+    setDynamicDeductions({});
+    setAddedExpenses([]);
     setFreight("");
     setLabor("");
     setOtherCharges("");
@@ -158,11 +179,14 @@ export default function BillingPage() {
       vehicleNo: gaariNo,
       beopari: selectedBeopari,
       lineItems,
-      deductions: {
-        freight: Number(freight) || 0,
-        labor: Number(labor) || 0,
-        otherCharges: Number(otherCharges) || 0
-      },
+      deductions: addedExpenses.map(e => ({
+        expenseId: e._id,
+        nameEn: e.nameEnglish,
+        nameUr: e.nameUrdu,
+        amount: getCalculatedExpense(e),
+        sellerApplicable: e.sellerApplicable,
+        buyerApplicable: e.buyerApplicable
+      })).filter(e => e.amount > 0),
       totals: {
         totalWeight,
         totalAmount,
@@ -282,7 +306,7 @@ export default function BillingPage() {
           <tbody>
             {lineItems.map((li, i) => (
               <tr key={i}>
-                <td className="border border-black p-2 text-right">{li.item}</td>
+                <td className="border border-black p-2 text-right">{li.item} {li.itemSize ? `(${li.itemSize})` : ""}</td>
                 <td className="border border-black p-2 text-center">{li.bags}</td>
                 <td className="border border-black p-2 text-center">{li.weight}</td>
                 <td className="border border-black p-2 text-center">{li.rate}</td>
@@ -363,7 +387,7 @@ export default function BillingPage() {
                 <tbody className="divide-y divide-[#E2E8F0] bg-white">
                   {lineItems.map((li, idx) => (
                     <tr key={li.id} className="hover:bg-cyan-50/50 transition-colors">
-                      <td className="p-2 border-l border-[#E2E8F0] font-urdu text-center text-[#334155]">{li.item}</td>
+                      <td className="p-2 border-l border-[#E2E8F0] font-urdu text-center text-[#334155]">{li.item} {li.itemSize ? <span className="text-xs opacity-70">({li.itemSize})</span> : ""}</td>
                       <td className="p-2 border-l border-[#E2E8F0] text-center font-urdu text-[#334155]">{li.customer ? `${li.customer.code} - ${li.customer.nameUrdu}` : "-"}</td>
                       <td className="p-2 border-l border-[#E2E8F0] font-bold text-center text-[#0F172A]">{li.weight}</td>
                       <td className="p-2 border-l border-[#E2E8F0] text-center font-urdu text-[#334155]">{li.commissionPct}%</td>
@@ -592,39 +616,62 @@ export default function BillingPage() {
 
           {/* Deductions Trigger Button */}
           <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm flex flex-col overflow-hidden text-xs shrink-0" dir="rtl">
-            <button 
-              onClick={() => setIsDeductionsOpen(true)}
-              className="bg-[#064789] text-white p-2.5 font-bold flex items-center justify-between hover:bg-[#053a70] transition-colors"
-            >
+            <div className="bg-[#064789] text-white p-2.5 font-bold flex items-center justify-between">
               <span className="text-[13px]">مزید بل خرچہ (Deductions)</span>
-              <div className="bg-[#06b6d4] rounded-full p-1 shadow-sm">
-                 <Plus className="h-4 w-4 text-white" />
-              </div>
-            </button>
+              <button 
+                onClick={() => setIsExpenseSearchOpen(true)}
+                className="bg-[#06b6d4] text-white px-3 py-1 rounded-full text-xs hover:bg-cyan-600 transition-colors flex items-center gap-1 shadow-sm"
+              >
+                <Plus className="h-3 w-3" /> شامل کریں (Add)
+              </button>
+            </div>
             
-            {(Number(freight) > 0 || Number(labor) > 0 || Number(otherCharges) > 0) && (
-              <div className="p-3 bg-slate-50 flex flex-col gap-2 border-t border-[#E2E8F0]">
-                {Number(freight) > 0 && (
-                  <div className="flex justify-between items-center text-slate-700">
-                    <span className="font-medium">Freight (کرایہ)</span>
-                    <span className="font-bold">{freight} RS</span>
-                  </div>
-                )}
-                {Number(labor) > 0 && (
-                  <div className="flex justify-between items-center text-slate-700">
-                    <span className="font-medium">Labor (مزدوری)</span>
-                    <span className="font-bold text-red-500">{labor} RS</span>
-                  </div>
-                )}
-                {Number(otherCharges) > 0 && (
-                  <div className="flex justify-between items-center text-slate-700">
-                    <span className="font-medium">Other (متفرق)</span>
-                    <span className="font-bold">{otherCharges} RS</span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center border-t border-[#E2E8F0] pt-2 mt-1">
-                  <span className="font-bold text-[#0F172A]">Total (کل خرچہ)</span>
-                  <span className="font-black text-[#0F172A]">{totalDeductions} RS</span>
+            
+              <div className="flex flex-col bg-slate-50 border-t border-[#E2E8F0] max-h-64 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                <table className="w-full text-[10px] text-center" dir="rtl">
+                  <thead className="bg-[#F8FAFC] sticky top-0 border-b border-[#E2E8F0]">
+                    <tr>
+                      <th className="p-1.5 border-l border-[#E2E8F0] font-bold text-[#334155]">خرچہ نام</th>
+                      <th className="p-1.5 border-l border-[#E2E8F0] font-bold text-[#334155]">ریٹ / کلکولیشن</th>
+                      <th className="p-1.5 font-bold text-[#334155]">رقم</th>
+                      <th className="p-1.5 font-bold text-[#334155] w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                    {addedExpenses.map(e => (
+                      <tr key={e._id} className="hover:bg-cyan-50/50 transition-colors">
+                        <td className="p-1.5 border-l border-[#E2E8F0] font-urdu font-bold text-[#0F172A] whitespace-nowrap">{e.nameUrdu} <br/><span className="font-sans font-normal text-[9px] text-slate-500">{e.nameEnglish}</span></td>
+                        <td className="p-1.5 border-l border-[#E2E8F0] font-sans font-bold text-[#334155]">{e.rate} {e.calculationType === 'Percentage' ? '%' : 'RS'}<br/><span className="font-urdu font-normal text-[9px] text-slate-500">{e.calculationType === 'Total' ? 'ٹوٹل' : e.calculationType === 'Weight' ? 'وزن' : e.calculationType === 'Percentage' ? 'فیصد' : 'فکسڈ'}</span></td>
+                        <td className="p-1.5 border-l border-[#E2E8F0]">
+                          <input 
+                            type="number" 
+                            placeholder={Math.round(getCalculatedExpense(e)).toString()} 
+                            value={dynamicDeductions[e._id] !== undefined ? dynamicDeductions[e._id] : ""} 
+                            onChange={ev => setDynamicDeductions({...dynamicDeductions, [e._id]: ev.target.value === "" ? "" : Number(ev.target.value)})} 
+                            className="w-16 p-1 rounded border border-[#E2E8F0] text-center focus:border-[#06b6d4] outline-none text-red-500 font-bold bg-[#F8FAFC]" 
+                          />
+                        </td>
+                        <td className="p-1.5">
+                          <button onClick={() => setAddedExpenses(addedExpenses.filter(x => x._id !== e._id))} className="text-red-500 hover:text-red-700 bg-red-50 p-1 rounded-md">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {addedExpenses.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="p-4 text-center text-slate-400 font-urdu text-xs">کوئی خرچہ شامل نہیں کیا گیا۔ (No expenses added)</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            
+            {totalDeductions > 0 && (
+              <div className="p-2 bg-slate-50 flex flex-col gap-1 border-t border-[#E2E8F0]">
+                <div className="flex justify-between items-center text-slate-700 text-xs">
+                  <span className="font-bold text-[#0F172A]">کل خرچہ (Total Deductions)</span>
+                  <span className="font-black text-red-500">{Math.round(totalDeductions).toLocaleString()} RS</span>
                 </div>
               </div>
             )}
@@ -686,41 +733,17 @@ export default function BillingPage() {
         }}
       />
 
-      {/* Deductions Modal */}
-      {isDeductionsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col" dir="rtl">
-            <div className="bg-[#1e293b] text-white p-3 font-bold flex items-center justify-between">
-              <span>مزید بل خرچہ (Deductions)</span>
-              <button onClick={() => setIsDeductionsOpen(false)} className="text-slate-300 hover:text-white">
-                 <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-4 space-y-3">
-                <div className="flex items-center justify-between bg-[#F8FAFC] p-2 rounded-md border border-[#E2E8F0]/50">
-                  <span className="font-urdu text-[#0F172A] font-medium">Freight (کرایہ)</span>
-                  <input type="number" min="0" value={freight} onChange={e => setFreight(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))} onKeyDown={e => e.key === '-' && e.preventDefault()} className="w-24 p-1 rounded border border-[#E2E8F0] text-center focus:border-[#06b6d4] outline-none" />
-                </div>
-                <div className="flex items-center justify-between bg-[#F8FAFC] p-2 rounded-md border border-[#E2E8F0]/50">
-                  <span className="font-urdu text-[#0F172A] font-medium">Labor (مزدوری)</span>
-                  <input type="number" min="0" value={labor} onChange={e => setLabor(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))} onKeyDown={e => e.key === '-' && e.preventDefault()} className="w-24 p-1 rounded border border-[#E2E8F0] text-center focus:border-[#06b6d4] outline-none text-red-500 font-medium" />
-                </div>
-                <div className="flex items-center justify-between bg-[#F8FAFC] p-2 rounded-md border border-[#E2E8F0]/50">
-                  <span className="font-urdu text-[#0F172A] font-medium">Other (متفرق)</span>
-                  <input type="number" min="0" value={otherCharges} onChange={e => setOtherCharges(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))} onKeyDown={e => e.key === '-' && e.preventDefault()} className="w-24 p-1 rounded border border-[#E2E8F0] text-center focus:border-[#06b6d4] outline-none" />
-                </div>
-            </div>
-            <div className="p-3 border-t border-[#E2E8F0] bg-slate-50 flex justify-end">
-              <button onClick={() => setIsDeductionsOpen(false)} className="bg-[#06b6d4] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-cyan-600 transition-colors">
-                Save (محفوظ کریں)
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-
+      
     </div>
+          <ExpenseSearchModal 
+        isOpen={isExpenseSearchOpen} 
+        onClose={() => setIsExpenseSearchOpen(false)} 
+        onSelect={(exp) => {
+          if (!addedExpenses.find(e => e._id === exp._id)) {
+            setAddedExpenses([...addedExpenses, exp]);
+          }
+        }}
+      />
     </>
   );
 }
