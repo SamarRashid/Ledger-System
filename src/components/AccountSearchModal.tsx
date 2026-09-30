@@ -10,6 +10,7 @@ export interface Account {
   marka: string;
   subGroup: string;
   nameEnglish: string;
+  openingBalance?: number;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -61,6 +62,7 @@ export function AccountSearchModal({
         marka: "",
         subGroup: "گاہک",
         nameEnglish: c.nameEnglish,
+        openingBalance: c.openingBalance || 0,
       }));
 
       const formattedSuppliers: Account[] = (suppliersData.data || []).map((s: any) => ({
@@ -70,6 +72,7 @@ export function AccountSearchModal({
         marka: "",
         subGroup: "بیوپاری",
         nameEnglish: s.nameEnglish,
+        openingBalance: s.openingBalance || 0,
       }));
 
       setAccounts([...formattedCustomers, ...formattedSuppliers]);

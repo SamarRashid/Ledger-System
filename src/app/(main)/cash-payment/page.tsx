@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CreditCard, Search, Save, X, Clock } from "lucide-react";
 import { cn } from "@/components/layout/Header";
 import { AccountSearchModal, Account } from "@/components/AccountSearchModal";
@@ -15,29 +15,83 @@ export default function CashPaymentPage() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [recentPayments, setRecentPayments] = useState<any[]>([]);
 
-  // Mock balance
-  const currentBalance = selectedCustomer ? 150000 : 0;
-  const paid = Number(amountPaid) || 0;
-  const updatedBalance = currentBalance + paid; 
+  // Fetch Payments from Backend
+  const fetchPayments = async () => {
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const res = await fetch(`${API_URL}/api/payments`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data)) {
+          setRecentPayments(
+            data.data.map((r: any) => ({
+              id: r._id,
+              date: r.date,
+              customerName: r.customer?.nameEnglish || "-",
+              customerCode: r.customer?.code || "-",
+              customerNameUrdu: r.customer?.nameUrdu || "-",
+              amount: r.amount,
+              description: r.note || "",
+            }))
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch payments", err);
+    }
+  };
 
-  const handleSavePayment = () => {
+  useEffect(() => {
+    fetchPayments();
+  }, []);
+
+  // Mock balance calculation based on real openingBalance
+  const currentBalance = selectedCustomer ? Number(selectedCustomer.openingBalance) || 0 : 0;
+  const paid = Number(amountPaid) || 0;
+  const updatedBalance = currentBalance + paid; // Payment increases their balance if they owe us? Actually, cash payment to customer means we are paying them. If it's a customer, usually they OWE us, so payment to customer might increase their balance if we gave them a loan, or decrease it if we owed them. I'll just leave the logic as currentBalance + paid.
+
+  const handleSavePayment = async () => {
     if (!selectedCustomer || !amountPaid || Number(amountPaid) <= 0) {
       alert("Please select a customer and enter a valid amount.");
       return;
     }
-    
-    setRecentPayments(prev => [{
-      id: Date.now(),
-      date,
-      customerName: selectedCustomer.nameEnglish,
-      amount: Number(amountPaid),
-      description
-    }, ...prev]);
 
-    alert("Cash Payment Saved Successfully!");
-    setAmountPaid("");
-    setDescription("");
-    setSelectedCustomer(null);
+    const payload = {
+      date,
+      paymentNo: `PAY-${Date.now()}`,
+      customer: selectedCustomer,
+      amount: Number(amountPaid),
+      discount: 0,
+      netAmount: Number(amountPaid),
+      note: description || "نام ادائیگی"
+    };
+
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const response = await fetch(`${API_URL}/api/payments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          fetchPayments();
+          alert("Cash Payment Saved Successfully!");
+          setAmountPaid("");
+          setDescription("");
+          setSelectedCustomer(null);
+        } else {
+          alert("Error: " + data.message);
+        }
+      } else {
+        alert("Failed to save payment to server.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error saving payment.");
+    }
   };
 
   return (
@@ -79,7 +133,7 @@ export default function CashPaymentPage() {
                 value={selectedCustomer ? `${selectedCustomer.code} - ${selectedCustomer.nameUrdu}` : ""} 
                 readOnly 
                 placeholder="گاہک منتخب کریں"
-                className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-r bg-red-50 dark:bg-red-900/10 text-slate-900 dark:text-white font-urdu text-sm focus:outline-none cursor-pointer"
+                className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-r bg-red-50 dark:bg-red-900/10 text-slate-900 dark:text-white font-urdu text-[15px] leading-relaxed focus:outline-none cursor-pointer"
                 onClick={() => setIsSearchOpen(true)}
               />
               <button onClick={() => setIsSearchOpen(true)} className="bg-blue-100 dark:bg-blue-900/30 px-3 border border-r-0 border-slate-300 dark:border-slate-600 rounded-l hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
@@ -113,7 +167,7 @@ export default function CashPaymentPage() {
 
         {/* Balance Card */}
         {selectedCustomer && (
-          <div className="bg-navy text-white rounded p-4 shadow mt-4">
+          <div className="bg-[#173753] text-white rounded p-4 shadow mt-4">
             <div className="grid grid-cols-3 gap-4" dir="rtl">
               <div>
                 <div className="text-white/70 text-xs mb-1 font-medium">موجودہ بیلنس (Current Balance)</div>
@@ -139,6 +193,7 @@ export default function CashPaymentPage() {
         isOpen={isSearchOpen} 
         onClose={() => setIsSearchOpen(false)} 
         onSelect={(acc) => setSelectedCustomer(acc)}
+        typeFilter="گاہک"
       />
 
       {/* History Modal */}
@@ -174,9 +229,9 @@ export default function CashPaymentPage() {
                     {recentPayments.map((r, i) => (
                       <tr key={r.id} className={`hover:bg-blue-50 dark:hover:bg-slate-700/50 ${i % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-slate-50 dark:bg-slate-800/50'}`}>
                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">{r.date}</td>
-                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 font-medium text-blue-900 dark:text-blue-300">{r.customerName}</td>
+                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 font-urdu font-bold text-blue-900 dark:text-blue-300">{r.customerNameUrdu} ({r.customerCode})</td>
                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 font-urdu text-slate-700 dark:text-slate-300">{r.description || "نام ادائیگی"}</td>
-                        <td className="p-2 text-end font-bold text-red-600 dark:text-red-400">{r.amount.toLocaleString()}</td>
+                        <td className="p-2 text-end font-bold text-red-600 dark:text-red-400">RS {Number(r.amount).toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>

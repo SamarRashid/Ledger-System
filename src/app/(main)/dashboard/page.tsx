@@ -65,6 +65,7 @@ export default function DashboardPage() {
   const [currentDateStr, setCurrentDateStr] = useState<string>("");
   
   const [bills, setBills] = useState<any[]>([]);
+  const [receipts, setReceipts] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -91,11 +92,25 @@ export default function DashboardPage() {
         }
       } catch (err) {
         console.error("Failed to fetch dashboard bills", err);
+      }
+    };
+    const fetchReceipts = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/receipts`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setReceipts(data.data);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch dashboard receipts", err);
       } finally {
         setLoading(false);
       }
     };
     fetchBills();
+    fetchReceipts();
   }, []);
 
   const filteredData = useMemo(() => {
@@ -131,6 +146,14 @@ export default function DashboardPage() {
   const todayBills = bills.filter(b => b.date && b.date.startsWith(todayStr));
   const todaySales = todayBills.reduce((sum, b) => sum + (Number(b.totals?.netTotal) || 0), 0);
   const todayCommission = todayBills.reduce((sum, b) => sum + (Number(b.totals?.totalCommission) || 0), 0);
+
+  const todayReceipts = receipts.filter(r => r.date && r.date.startsWith(todayStr));
+  const todayCashReceived = todayReceipts.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+  
+  // Outstanding could be total historical unpaid, but for dashboard maybe just today's outstanding or overall.
+  const totalHistoricalSales = bills.reduce((sum, b) => sum + (Number(b.totals?.netTotal) || 0), 0);
+  const totalHistoricalReceipts = receipts.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+  const totalOutstanding = Math.max(0, totalHistoricalSales - totalHistoricalReceipts);
 
   return (
     <div className="space-y-7">
@@ -201,7 +224,7 @@ export default function DashboardPage() {
 
             <div className="text-left mt-auto">
               <span className="text-[17px] font-extrabold text-[#173753] dark:text-blue-100 tracking-tight">
-                0
+                {todayCashReceived.toLocaleString()}
               </span>
 
               <span className="text-[10px] font-bold text-slate-400 ml-1">
@@ -231,7 +254,7 @@ export default function DashboardPage() {
 
             <div className="text-left mt-auto">
               <span className="text-[17px] font-extrabold text-[#173753] dark:text-blue-100 tracking-tight">
-                0
+                {totalOutstanding.toLocaleString()}
               </span>
 
               <span className="text-[10px] font-bold text-slate-400 ml-1">

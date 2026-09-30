@@ -5,6 +5,7 @@ import { Search, Save, Printer, Plus, ChevronDown, ChevronUp, X, CheckCircle2, M
 import { cn } from "@/components/layout/Header";
 import { AccountSearchModal, Account } from "@/components/AccountSearchModal";
 import { ItemSearchModal } from "@/components/ItemSearchModal";
+import { ItemSizeSearchModal } from "@/components/ItemSizeSearchModal";
 
 type LineItem = {
   id: string;
@@ -51,6 +52,7 @@ export default function BillingPage() {
 
   const [showToast, setShowToast] = useState<boolean>(false);
   const [isItemSearchOpen, setIsItemSearchOpen] = useState<boolean>(false);
+  const [isItemSizeSearchOpen, setIsItemSizeSearchOpen] = useState<boolean>(false);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Account | null>(null);
   
@@ -92,6 +94,8 @@ export default function BillingPage() {
   
   const totalDeductions: number = Math.max(0, (Number(freight) || 0) + (Number(labor) || 0) + (Number(otherCharges) || 0));
   const netTotal: number = Math.max(0, totalAmount - totalCommission - totalDeductions);
+  const totalBags: number = lineItems.reduce((sum, li) => sum + (Number(li.bags) || 0), 0);
+  const averageWeight: number | string = totalWeight > 0 ? (totalAmount / totalWeight).toFixed(2) : 0;
 
   const handleAddLineItem = () => {
     if (!item || !weight || !rate) return;
@@ -110,12 +114,9 @@ export default function BillingPage() {
       commissionPct: commissionPct
     }]);
 
-    // Reset inputs except Beopari
+    // Reset inputs except Beopari, CopyNo, and GaariNo
     setSelectedCustomer(null);
-    setCopyNo("");
-    setGaariNo("");
     setItem("");
-    setCommissionPct("");
     setItemSize("");
     setBags("");
     setWeight("");
@@ -390,7 +391,7 @@ export default function BillingPage() {
                 </div>
                 <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
                   <span className="text-[#334155] font-medium">اصل اوسط (Average):</span>
-                  <span className="font-bold text-red-500">70</span>
+                  <span className="font-bold text-red-500">{averageWeight}</span>
                 </div>
                 <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
                   <span className="text-[#334155] font-medium">کل رقم (Gross Total):</span>
@@ -409,7 +410,7 @@ export default function BillingPage() {
                 </div>
                 <div className="flex justify-between bg-[#06b6d4]/10 p-2 rounded-lg mt-2 border border-[#06b6d4]/20">
                   <span className="font-bold text-[#0F172A]">خالص بل رقم (Net Total):</span>
-                  <span className="font-black text-[#06b6d4] text-sm">RS {netTotal.toLocaleString()}-</span>
+                  <span className="font-black text-[#06b6d4] text-sm">RS {netTotal.toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -539,7 +540,7 @@ export default function BillingPage() {
               </div>
               <div className="col-span-4 flex flex-col gap-0.5">
                 <label className="font-bold text-[#0F172A] whitespace-nowrap">Comm (کمیشن)</label>
-                <input type="number" value={commissionPct} onChange={e => setCommissionPct(Number(e.target.value))} className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full text-center min-h-[26px]" />
+                <input type="number" value={commissionPct} readOnly className="border border-[#E2E8F0] rounded-sm p-0.5 bg-gray-100 text-gray-500 outline-none w-full text-center min-h-[26px] cursor-not-allowed" />
               </div>
             </div>
 
@@ -547,11 +548,21 @@ export default function BillingPage() {
             <div className="grid grid-cols-12 gap-2">
               <div className="col-span-6 flex flex-col gap-0.5">
                 <label className="font-bold text-[#0F172A] whitespace-nowrap">Item Size (اشیاء سائز کلو)</label>
-                <input type="text" value={itemSize} onChange={e => setItemSize(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full min-h-[26px]" />
+                <div className="flex relative w-full">
+                  <div 
+                    className="border border-[#E2E8F0] rounded-sm p-0.5 min-h-[26px] w-full bg-white font-bold cursor-pointer text-[#0F172A] flex items-center justify-center whitespace-nowrap"
+                    onClick={() => setIsItemSizeSearchOpen(true)}
+                  >
+                    {itemSize ? itemSize : <span className="text-gray-400 font-normal text-xs">Item Size</span>}
+                  </div>
+                  <button onClick={() => setIsItemSizeSearchOpen(true)} className="absolute left-0 top-0 bottom-0 bg-slate-100 rounded-l-sm px-2 border border-[#E2E8F0] hover:bg-slate-200">
+                    <Search className="w-3 h-3 text-[#334155]" />
+                  </button>
+                </div>
               </div>
               <div className="col-span-6 flex flex-col gap-0.5">
                 <label className="font-bold text-[#0F172A] whitespace-nowrap">Packing (پیکنگ)</label>
-                <input type="number" value={bags} onChange={e => setBags(Number(e.target.value))} className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full text-center min-h-[26px]" />
+                <input type="number" value={bags} onChange={e => setBags(e.target.value === "" ? "" : Number(e.target.value))} placeholder="-" className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full text-center min-h-[26px] placeholder:text-xl placeholder:font-bold placeholder:text-gray-400 placeholder:-translate-y-0.5" />
               </div>
             </div>
 
@@ -665,6 +676,13 @@ export default function BillingPage() {
         onClose={() => setIsItemSearchOpen(false)} 
         onSelect={(itm) => {
           setItem(itm.nameUrdu);
+        }}
+      />
+      <ItemSizeSearchModal 
+        isOpen={isItemSizeSearchOpen} 
+        onClose={() => setIsItemSizeSearchOpen(false)} 
+        onSelect={(sz) => {
+          setItemSize(sz);
         }}
       />
 

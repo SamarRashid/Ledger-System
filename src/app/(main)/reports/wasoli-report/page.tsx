@@ -222,6 +222,17 @@ export default function WasoliReportPage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8 animate-in fade-in duration-500 pb-12">
+      <style>{`
+        @media print {
+          body, html, main, div {
+            height: auto !important;
+            overflow: visible !important;
+          }
+          .print\\:hidden {
+            display: none !important;
+          }
+        }
+      `}</style>
       
       {/* SCREEN UI */}
       <div className="print:hidden space-y-6">
@@ -315,11 +326,11 @@ export default function WasoliReportPage() {
                       
                       <div className="grid grid-cols-2 gap-2 text-sm mt-2">
                         <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded">
-                          <span className="block text-xs font-urdu text-slate-500">پچھلا بیلنس (Prev)</span>
+                          <span className="block text-xs font-urdu text-slate-500">Previous Balance (سابقہ بقایا)</span>
                           <span className="font-bold">{(record as any).previousBalance.toLocaleString()}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded">
-                          <span className="block text-xs font-urdu text-slate-500">تازہ نام (Debt)</span>
+                          <span className="block text-xs font-urdu text-slate-500">Fresh Balance (تازہ بیلنس)</span>
                           <span className="font-bold">{record.freshDebt.toLocaleString()}</span>
                         </div>
                       </div>
@@ -345,8 +356,8 @@ export default function WasoliReportPage() {
               <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase text-xs border-b-2 border-slate-300 dark:border-slate-600">
                 <th className="p-3 border-l border-slate-300 dark:border-slate-700 text-center w-24">کھاتہ نمبر</th>
                 <th className="p-3 border-l border-slate-300 dark:border-slate-700">نام خریدار</th>
-                <th className="p-3 border-l border-slate-300 dark:border-slate-700 text-center">پچھلا بیلنس</th>
-                <th className="p-3 border-l border-slate-300 dark:border-slate-700 text-center">تازہ نام</th>
+                <th className="p-3 border-l border-slate-300 dark:border-slate-700 text-center">Previous Balance (سابقہ بقایا)</th>
+                <th className="p-3 border-l border-slate-300 dark:border-slate-700 text-center">Fresh Balance (تازہ بیلنس)</th>
                 <th className="p-3 border-l border-slate-300 dark:border-slate-700 text-center">تازہ وصولی</th>
                 <th className="p-3 text-center text-sm">بقایا بیلنس</th>
               </tr>
@@ -398,7 +409,7 @@ export default function WasoliReportPage() {
                   
                   {/* GRAND TOTAL ROW */}
                   <tr className="bg-[#083D77] text-white border-y-4 border-[#083D77]">
-                    <td colSpan={3} className="p-3 border-l border-white/20 text-center font-urdu text-lg font-bold">
+                    <td colSpan={2} className="p-3 border-l border-white/20 text-center font-urdu text-lg font-bold">
                       کل جمع / بقایا (Grand Total)
                     </td>
                     <td className="p-3 border-l border-white/20 text-center font-mono font-bold text-lg">
@@ -445,8 +456,8 @@ export default function WasoliReportPage() {
             <tr className="border-b border-black bg-gray-50">
               <th className="border border-black px-2 py-1 text-center w-16">کھاتہ نمبر</th>
               <th className="border border-black px-2 py-1 text-center">نام خریدار</th>
-              <th className="border border-black px-2 py-1 text-center">پچھلا بیلنس</th>
-              <th className="border border-black px-2 py-1 text-center">تازہ نام</th>
+              <th className="border border-black px-2 py-1 text-center">Previous Balance (سابقہ بقایا)</th>
+              <th className="border border-black px-2 py-1 text-center">Fresh Balance (تازہ بیلنس)</th>
               <th className="border border-black px-2 py-1 text-center">تازہ وصولی</th>
               <th className="border border-black px-2 py-1 text-center">بقایا بیلنس</th>
             </tr>
@@ -467,22 +478,22 @@ export default function WasoliReportPage() {
                     </tr>
                     {groupedData[area].map((record) => (
                       <tr key={record.id}>
-                        <td className="border border-black px-2 py-1 text-center font-mono font-bold bg-gray-200/50">
+                        <td className="border-y border-l border-r border-black px-2 py-1 text-center font-mono font-bold bg-gray-200/50">
                           {record.accountNo}
                         </td>
-                        <td className="border border-black px-2 py-1 text-center">
+                        <td className="border-y border-l border-black px-2 py-1 text-center">
                           {record.customerNameUr}
                         </td>
-                        <td className="border border-black px-2 py-1 text-center font-mono font-bold">
+                        <td className="border-y border-l border-black px-2 py-1 text-center font-mono font-bold">
                           {(record as any).previousBalance.toLocaleString()}
                         </td>
-                        <td className="border border-black px-2 py-1 text-center font-mono font-bold">
+                        <td className="border-y border-l border-black px-2 py-1 text-center font-mono font-bold">
                           {record.freshDebt > 0 ? record.freshDebt.toLocaleString() : ""}
                         </td>
-                        <td className="border border-black px-2 py-1 text-center font-mono font-bold">
+                        <td className="border-y border-l border-black px-2 py-1 text-center font-mono font-bold">
                           {record.freshReceipt > 0 ? record.freshReceipt.toLocaleString() : ""}
                         </td>
-                        <td className="border border-black px-2 py-1 text-center font-mono font-bold">
+                        <td className="border-y border-l border-black px-2 py-1 text-center font-mono font-bold">
                           {record.balance.toLocaleString()}
                         </td>
                       </tr>
@@ -492,7 +503,7 @@ export default function WasoliReportPage() {
                 
                 {/* GRAND TOTAL ROW */}
                 <tr className="border-t-[3px] border-black">
-                  <td colSpan={3} className="border border-black px-2 py-1 text-center font-bold text-lg bg-gray-100">
+                  <td colSpan={2} className="border border-black px-2 py-1 text-center font-bold text-lg bg-gray-100">
                     کل جمع / بقایا
                   </td>
                   <td className="border border-black px-2 py-1 text-center font-mono font-bold text-lg bg-gray-100">

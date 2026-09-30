@@ -124,8 +124,8 @@ export default function KatchaChithaPage(): React.JSX.Element {
         <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-4">
           <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-emerald-500" />
-            Daily Bills Summary
-            <span className="font-urdu font-normal text-slate-500 dark:text-slate-400 text-sm">(آج کے بلز)</span>
+            Bills Summary
+            <span className="font-urdu font-normal text-slate-500 dark:text-slate-400 text-sm">(بلز کی تفصیل)</span>
           </h2>
           <span className="text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-600">
             Total Bills: {filteredBills.length}

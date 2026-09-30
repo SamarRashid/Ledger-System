@@ -32,9 +32,41 @@ export default function CashReceiptPage(): React.JSX.Element {
   const [recentReceipts, setRecentReceipts] = useState<ReceiptRecord[]>([]);
 
   // Mock balance calculation
-  const currentBalance: number = selectedCustomer ? 150000 : 0;
+  const currentBalance: number = selectedCustomer ? Number(selectedCustomer.openingBalance) || 0 : 0;
   const received: number = Number(amountReceived) || 0;
   const updatedBalance: number = currentBalance - received;
+
+  // Fetch Receipts from Backend
+  const fetchReceipts = async () => {
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const res = await fetch(`${API_URL}/api/receipts`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data)) {
+          setRecentReceipts(
+            data.data.map((r: any) => ({
+              id: r._id,
+              date: r.date,
+              customerCode: r.customer?.code || "-",
+              customerNameUrdu: r.customer?.nameUrdu || "-",
+              customerNameEnglish: r.customer?.nameEnglish || "-",
+              amount: r.amount,
+              description: r.note || "",
+              previousBalance: Number(r.customer?.openingBalance) || 0,
+              remainingBalance: (Number(r.customer?.openingBalance) || 0) - Number(r.amount)
+            }))
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch receipts", err);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchReceipts();
+  }, []);
 
   // Form Reset Function
   const handleResetForm = (): void => {
@@ -60,7 +92,7 @@ export default function CashReceiptPage(): React.JSX.Element {
   };
 
   // Save / Update Record Handler
-  const handleSaveReceipt = (): void => {
+  const handleSaveReceipt = async (): Promise<void> => {
     if (!selectedCustomer) {
       alert("براہ کرم پہلے گاہک (Customer) منتخب کریں۔");
       return;
@@ -71,47 +103,40 @@ export default function CashReceiptPage(): React.JSX.Element {
       return;
     }
 
-    const customerCode = String(selectedCustomer.code || selectedCustomer.id || "-");
-    const customerNameUrdu = String(selectedCustomer.nameUrdu || "");
-    const customerNameEnglish = String(selectedCustomer.nameEnglish || "");
+    const payload = {
+      date,
+      receiptNo: `REC-${Date.now()}`,
+      customer: selectedCustomer,
+      amount: Number(amountReceived),
+      discount: 0,
+      netAmount: Number(amountReceived),
+      note: description || "کیش وصولی"
+    };
 
-    if (editingId) {
-      // Update record
-      setRecentReceipts((prev) =>
-        prev.map((item) =>
-          item.id === editingId
-            ? {
-                ...item,
-                date,
-                customerCode,
-                customerNameUrdu,
-                customerNameEnglish,
-                amount: Number(amountReceived),
-                description: description || "کیش وصولی",
-                previousBalance: currentBalance,
-                remainingBalance: updatedBalance,
-              }
-            : item
-        )
-      );
-    } else {
-      // New record
-      const newRecord: ReceiptRecord = {
-        id: Date.now(),
-        date,
-        customerCode,
-        customerNameUrdu,
-        customerNameEnglish,
-        amount: Number(amountReceived),
-        description: description || "کیش وصولی",
-        previousBalance: currentBalance,
-        remainingBalance: updatedBalance,
-      };
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      // We don't support UPDATE yet in backend, only CREATE
+      const response = await fetch(`${API_URL}/api/receipts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
-      setRecentReceipts((prev) => [newRecord, ...prev]);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          fetchReceipts();
+          handleResetForm();
+        } else {
+          alert("Error: " + data.message);
+        }
+      } else {
+        alert("Failed to save receipt to server.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error saving receipt.");
     }
-
-    handleResetForm();
   };
 
   return (
@@ -155,7 +180,7 @@ export default function CashReceiptPage(): React.JSX.Element {
                 value={selectedCustomer ? `${selectedCustomer.nameUrdu} (${selectedCustomer.code || selectedCustomer.id})` : ""}
                 readOnly
                 placeholder="گاہک منتخب کریں"
-                className="w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-r-lg bg-indigo-50 dark:bg-indigo-900/20 text-slate-900 dark:text-white font-urdu text-sm focus:outline-none cursor-pointer"
+                className="w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-r-lg bg-indigo-50 dark:bg-indigo-900/20 text-slate-900 dark:text-white font-urdu text-[15px] leading-relaxed focus:outline-none cursor-pointer"
                 onClick={() => setIsSearchOpen(true)}
               />
               <button
@@ -199,7 +224,7 @@ export default function CashReceiptPage(): React.JSX.Element {
 
         {/* Balance Card */}
         {selectedCustomer && (
-          <div className="bg-[#1b1b3a] text-white rounded-xl p-6 shadow-md mt-6 border border-white/10">
+          <div className="bg-[#173753] text-white rounded-xl p-6 shadow-md mt-6 border border-white/10">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x md:divide-x-reverse divide-white/20" dir="rtl">
               <div className="py-2 md:py-0 text-center md:text-right">
                 <div className="text-white/70 text-sm mb-2 font-medium">موجودہ بیلنس (Current Balance)</div>
@@ -332,6 +357,7 @@ export default function CashReceiptPage(): React.JSX.Element {
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         onSelect={(acc: Account) => setSelectedCustomer(acc)}
+        typeFilter="گاہک"
       />
 
       {/* Recent History Modal */}
