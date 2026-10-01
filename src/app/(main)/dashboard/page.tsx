@@ -266,7 +266,7 @@ export default function DashboardPage() {
 
         {/* Commission Earned */}
         <Link
-          href="/receipts"
+          href="/commission"
           className="group bg-white dark:bg-slate-800 p-5 lg:p-6 rounded-2xl shadow-[0_4px_20px_rgba(8,61,119,0.06)] dark:shadow-none border border-[#E2E8F0] dark:border-slate-700 hover:border-[#173753]/30 dark:hover:border-purple-500/50 hover:shadow-[0_12px_30px_rgba(8,61,119,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden min-h-[120px]"
         >
           <div className="absolute top-4 right-4 h-10 w-10 bg-[#173753]/10 dark:bg-purple-900/30 text-[#2892D7] dark:text-purple-400 rounded-xl flex items-center justify-center shrink-0 z-10 group-hover:scale-110 group-hover:bg-[#173753]/15 transition-all duration-300">
@@ -410,7 +410,7 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-2 px-2 py-1.5">
             <input
-              type="date"
+              type="date" suppressHydrationWarning max={new Date().toISOString().split('T')[0]}
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
               className="bg-transparent border-none text-[13px] font-semibold text-[#083D77] dark:text-blue-400 focus:outline-none focus:ring-0 cursor-pointer w-[110px]"
@@ -421,7 +421,7 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-2 px-2 py-1.5">
             <input
-              type="date"
+              type="date" suppressHydrationWarning max={new Date().toISOString().split('T')[0]}
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
               className="bg-transparent border-none text-[13px] font-semibold text-[#083D77] dark:text-blue-400 focus:outline-none focus:ring-0 cursor-pointer w-[110px]"

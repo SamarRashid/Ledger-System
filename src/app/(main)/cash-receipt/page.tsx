@@ -164,7 +164,7 @@ export default function CashReceiptPage(): React.JSX.Element {
           <div className="lg:col-span-2">
             <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">تاریخ (Date)</label>
             <input
-              type="date"
+              type="date" suppressHydrationWarning max={new Date().toISOString().split('T')[0]}
               value={date}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDate(e.target.value)}
               className="w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0e4a86] bg-slate-50 dark:bg-slate-700/50 text-slate-900 dark:text-white text-sm"

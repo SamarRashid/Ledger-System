@@ -52,6 +52,7 @@ const navLinks = [
     labelEn: "Reports",
     labelUr: "رپورٹس",
     subItems: [
+      { href: "/commission", icon: FileText, labelEn: "Commission", labelUr: "کمیشن" },
       { href: "/reports/wasoli-report", icon: FileText, labelEn: "Recovery Report", labelUr: "وصولی رپورٹ" },
       { href: "/katcha-chitha", icon: ClipboardList, labelEn: "Day Book", labelUr: "کچا چٹھا" },
       { href: "/reports/daily-sale-book", icon: FileText, labelEn: "Daily Sale Book", labelUr: "روزانہ سیل بک" },

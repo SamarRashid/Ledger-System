@@ -475,7 +475,7 @@ export default function BillingPage() {
             <div className="flex justify-between items-center bg-[#06b6d4]/10 p-1 rounded border border-[#06b6d4]/20 gap-2">
               <div className="flex items-center gap-2 w-1/2">
                 <label className="font-bold text-[#0F172A] whitespace-nowrap">Date (تاریخ)</label>
-                <input type="date" suppressHydrationWarning value={date} onChange={e => setDate(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-0.5 text-center bg-white focus:border-[#06b6d4] outline-none flex-1 min-w-0 w-full" />
+                <input type="date" max={new Date().toISOString().split('T')[0]} suppressHydrationWarning value={date} onChange={e => setDate(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-0.5 text-center bg-white focus:border-[#06b6d4] outline-none flex-1 min-w-0 w-full" />
               </div>
               <div className="w-1/2 flex items-center gap-2">
                 <label className="font-bold text-[#0F172A] text-left whitespace-nowrap">Bill No (بل نمبر)</label>

@@ -109,7 +109,7 @@ export default function KatchaChithaPage(): React.JSX.Element {
           <div className="flex items-center gap-2 px-3 py-2">
             <Calendar className="w-4 h-4 text-slate-400" />
             <input
-              type="date"
+              type="date" max={new Date().toISOString().split('T')[0]}
               suppressHydrationWarning
               value={date}
               onChange={(e) => setDate(e.target.value)}

@@ -211,7 +211,7 @@ export default function LedgerPage() {
             </label>
 
             <input
-              type="date"
+              type="date" suppressHydrationWarning max={new Date().toISOString().split('T')[0]}
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
               className="w-full border border-slate-200 dark:border-slate-600 rounded-xl p-3.5 focus:border-[#06b6d4] focus:ring-4 focus:ring-cyan-50 outline-none bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm transition-all"
@@ -225,7 +225,7 @@ export default function LedgerPage() {
             </label>
 
             <input
-              type="date"
+              type="date" suppressHydrationWarning max={new Date().toISOString().split('T')[0]}
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
               className="w-full border border-slate-200 dark:border-slate-600 rounded-xl p-3.5 focus:border-[#06b6d4] focus:ring-4 focus:ring-cyan-50 outline-none bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-700 text-[#0F172A] dark:text-white text-sm transition-all"
