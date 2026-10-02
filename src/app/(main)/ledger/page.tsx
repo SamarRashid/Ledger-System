@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Printer, Search, ArrowRight } from "lucide-react";
+import { Printer, Search, ArrowRight, Share2 } from "lucide-react";
+import { toPng } from "html-to-image";
+import { jsPDF } from "jspdf";
 import { AccountSearchModal, Account } from "@/components/AccountSearchModal";
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -33,6 +35,7 @@ export default function LedgerPage() {
   const [allPayments, setAllPayments] = useState<any[]>([]);
   const [voucherType, setVoucherType] = useState<string>("All Vouchers");
   const [isThermalPrint, setIsThermalPrint] = useState<boolean>(false);
+  const [isSharing, setIsSharing] = useState<boolean>(false);
 
   const [printedDate, setPrintedDate] = useState<string>("");
 
@@ -77,6 +80,47 @@ export default function LedgerPage() {
     };
     fetchData();
   }, []);
+
+  const handleShare = async () => {
+    const element = document.getElementById('printable-ledger');
+    if (!element) return;
+    
+    setIsSharing(true);
+    try {
+      const imgData = await toPng(element, { pixelRatio: 2 });
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      const pdfBlob = pdf.output('blob');
+      
+      const fileName = `Ledger_${customer?.nameEnglish || 'Report'}.pdf`;
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Ledger Report',
+          text: 'Here is the ledger report.'
+        });
+      } else {
+        pdf.save(fileName);
+      }
+    } catch (error) {
+      console.error("Error generating or sharing PDF:", error);
+      alert("Failed to share PDF.");
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   const handlePrint = (): void => {
     window.print();
@@ -327,7 +371,7 @@ export default function LedgerPage() {
       ) : (
       <>
       {/* Printable Area */}
-      <div className={`bg-white dark:bg-slate-800 p-4 md:p-8 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 print:border-none print:shadow-none print:p-0 mt-6 overflow-hidden transition-colors ${isThermalPrint ? "print-thermal-mode" : ""}`}>
+      <div id="printable-ledger" className={`bg-white dark:bg-slate-800 p-4 md:p-8 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 print:border-none print:shadow-none print:p-0 mt-6 overflow-hidden transition-colors ${isThermalPrint ? "print-thermal-mode" : ""}`}>
 
         {/* Print Header */}
         <div className="border-b-2 border-[#0F172A] dark:border-slate-600 pb-6 mb-6">
@@ -503,6 +547,16 @@ export default function LedgerPage() {
       {/* BOTTOM ACTION BAR */}
       <div className="-mx-4 sm:-mx-6 lg:-mx-8 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 p-4 z-30 flex justify-end gap-3 px-6 print:hidden mt-8 rounded-b-xl shadow-sm transition-colors">
 
+        <button
+          type="button"
+          onClick={handleShare}
+          disabled={isSharing}
+          className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white px-8 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] hover:shadow-[0_6px_20px_rgba(16,185,129,0.23)] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Share2 className="h-4 w-4" />
+          {isSharing ? "Generating..." : "Share (شیئر)"}
+        </button>
+        
         <button
           type="button"
           onClick={() => handlePrint()}
