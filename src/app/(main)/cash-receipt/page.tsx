@@ -629,7 +629,7 @@ export default function CashReceiptPage(): React.JSX.Element {
             </label>
 
             <input
-              type="date"
+              type="date" suppressHydrationWarning max={new Date().toISOString().split('T')[0]}
               value={date}
               onChange={(e) =>
                 setDate(

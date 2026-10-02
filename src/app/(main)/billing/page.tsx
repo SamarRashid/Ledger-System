@@ -17,6 +17,7 @@ import {
 } from "@/components/AccountSearchModal";
 import { ItemSearchModal } from "@/components/ItemSearchModal";
 import { ItemSizeSearchModal } from "@/components/ItemSizeSearchModal";
+import { ExpenseSearchModal, Expense } from "@/components/ExpenseSearchModal";
 
 // ============================================================
 // TYPES
@@ -591,7 +592,6 @@ export default function BillingPage() {
     setBags("");
     setWeight("");
     setRate("");
-
     setFreight("");
     setLabor("");
     setOtherCharges("");

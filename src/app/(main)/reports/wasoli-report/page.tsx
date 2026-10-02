@@ -271,7 +271,7 @@ export default function WasoliReportPage() {
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-slate-400" />
             <input 
-              type="date"
+              type="date" suppressHydrationWarning max={new Date().toISOString().split('T')[0]}
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
               className="bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 text-sm rounded-lg focus:ring-[#083D77] focus:border-[#083D77] p-2"

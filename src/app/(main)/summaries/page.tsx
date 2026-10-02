@@ -117,7 +117,7 @@ export default function SummariesPage() {
             <div className="flex items-center gap-2 px-3 py-2">
               <CalendarDays className="w-4 h-4 text-slate-400" />
               <input 
-                type="date"
+                type="date" suppressHydrationWarning max={new Date().toISOString().split('T')[0]}
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 className="bg-transparent border-none text-[13px] font-bold text-[#083D77] dark:text-blue-400 focus:outline-none focus:ring-0 cursor-pointer w-[110px]"

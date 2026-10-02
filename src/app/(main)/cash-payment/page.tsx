@@ -118,7 +118,7 @@ export default function CashPaymentPage() {
           <div className="w-32">
             <label className="block text-xs font-bold text-blue-900 dark:text-blue-300 mb-1">تاریخ (Date)</label>
             <input 
-              type="date"
+              type="date" suppressHydrationWarning max={new Date().toISOString().split('T')[0]}
               value={date}
               onChange={(e) => setDate(e.target.value)}
               className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded focus:outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-700/50 text-slate-900 dark:text-white text-xs"

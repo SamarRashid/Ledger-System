@@ -19,13 +19,12 @@ interface TransactionWithBalance extends Transaction {
 }
 
 
-
-export default function LedgerPage() {
+export default function SupplierLedgerPage() {
   const [fromDate, setFromDate] = useState<string>("2026-09-01");
   const [toDate, setToDate] = useState<string>("2026-09-30");
 
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [selectedCustomer, setSelectedCustomer] = useState<string | number>("");
+  const [selectedSupplier, setSelectedSupplier] = useState<string | number>("");
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
 
   const [allBills, setAllBills] = useState<any[]>([]);
@@ -41,31 +40,29 @@ export default function LedgerPage() {
     
     const fetchData = async () => {
       try {
-        const [customersRes, suppliersRes, billsRes, receiptsRes, paymentsRes] = await Promise.all([
-          fetch(`${API_URL}/api/customers`).catch(() => null),
+        const [suppliersRes, billsRes, receiptsRes, paymentsRes] = await Promise.all([
           fetch(`${API_URL}/api/suppliers`).catch(() => null),
           fetch(`${API_URL}/api/bills`).catch(() => null),
           fetch(`${API_URL}/api/receipts`).catch(() => null),
           fetch(`${API_URL}/api/payments`).catch(() => null)
         ]);
 
-        const customersData = customersRes ? await customersRes.json() : { data: [] };
         const suppliersData = suppliersRes ? await suppliersRes.json() : { data: [] };
         const billsData = billsRes ? await billsRes.json() : { data: [] };
         const receiptsData = receiptsRes ? await receiptsRes.json() : { data: [] };
         const paymentsData = paymentsRes ? await paymentsRes.json() : { data: [] };
 
-        const formattedCustomers: Account[] = (customersData.data || []).map((c: any) => ({
+        const formattedSuppliers: Account[] = (suppliersData.data || []).map((c: any) => ({
           id: c.id || c._id,
           code: c.code,
           nameUrdu: c.nameUrdu,
           marka: "",
-          subGroup: "گاہک",
+          subGroup: "سپلائر",
           nameEnglish: c.nameEnglish,
           openingBalance: c.openingBalance || 0
         }));
 
-        setAccounts(formattedCustomers); // ONLY customers
+        setAccounts(formattedSuppliers);
 
         setAllBills(billsData.data || []);
         setAllReceipts(receiptsData.data || []);
@@ -82,55 +79,45 @@ export default function LedgerPage() {
     window.print();
   };
 
-    const customer = accounts.find(
-    (account) => account.id === selectedCustomer || String(account.id) === String(selectedCustomer)
+    const supplier = accounts.find(
+    (account) => account.id === selectedSupplier || String(account.id) === String(selectedSupplier)
   );
 
-  let currentBalance = customer ? (customer.openingBalance || 0) : 0;
+  let currentBalance = supplier ? (supplier.openingBalance || 0) : 0;
   
-  // Combine all transactions for this customer
+  // Combine all transactions for this supplier
   let allTx: Transaction[] = [];
   
-  if (customer && voucherType !== "Receipts (وصولی)") {
-    // Add Bills (Sales)
+  if (supplier && voucherType !== "Receipts (وصولی)") {
+    // Add Bills (Purchases/Sales on behalf of Beopari)
     allBills.forEach(b => {
-      let customerTotal = 0;
-      let items: string[] = [];
-      if (b.lineItems) {
-        b.lineItems.forEach((li: any) => {
-          if (li.customer && (li.customer.id === customer.id || li.customer._id === customer.id)) {
-            const amount = li.amount || 0;
-            const comm = amount * ((Number(li.commissionPct) || 0) / 100);
-            customerTotal += (amount + comm);
-            items.push(li.item);
-          }
-        });
-      }
-      
-      if (customerTotal > 0) {
-        allTx.push({
-          id: b.id || b._id,
-          date: b.date,
-          billNo: b.billNo,
-          description: items.length > 0 ? items.join("، ") : `بل نمبر ${b.billNo}`,
-          debit: customerTotal,
-          credit: 0
-        });
+      if (b.beopari && (b.beopari.id === supplier.id || b.beopari._id === supplier.id || b.beopari.code === supplier.code)) {
+        const netTotal = Number(b.totals?.netTotal) || 0;
+        if (netTotal > 0) {
+          allTx.push({
+            id: b.id || b._id,
+            date: b.date,
+            billNo: b.billNo,
+            description: `بل نمبر ${b.billNo}`,
+            debit: 0,
+            credit: netTotal // We owe them this amount
+          });
+        }
       }
     });
   }
 
-  if (customer && voucherType !== "Sales (سیلز)") {
-    // Add Receipts
-    allReceipts.forEach(r => {
-      if (r.customer && (r.customer.id === customer.id || r.customer._id === customer.id)) {
+  if (supplier && voucherType !== "Sales (سیلز)") {
+    // Add Payments to Supplier
+    allPayments.forEach(p => {
+      if (p.supplier && (p.supplier.id === supplier.id || p.supplier._id === supplier.id || p.supplier.code === supplier.code)) {
         allTx.push({
-          id: r.id || r._id,
-          date: r.date,
-          billNo: r.receiptNo,
-          description: `وصولی - ${r.note || ""}`,
-          debit: 0,
-          credit: r.amount || 0
+          id: p.id || p._id,
+          date: p.date,
+          billNo: p.paymentNo || p.voucherNo || "-",
+          description: `ادائیگی - ${p.note || ""}`,
+          debit: p.amount || 0, // We paid them
+          credit: 0
         });
       }
     });
@@ -149,7 +136,7 @@ export default function LedgerPage() {
 
   const transactionsWithBalance: TransactionWithBalance[] =
     allTx.map((tx: Transaction) => {
-      currentBalance = currentBalance + tx.debit - tx.credit;
+      currentBalance = currentBalance + tx.credit - tx.debit;
 
       return {
         ...tx,
@@ -157,10 +144,9 @@ export default function LedgerPage() {
       };
     });
 
-  
 
   const handleAccountSelect = (account: Account) => {
-    setSelectedCustomer(account.id);
+    setSelectedSupplier(account.id);
     setIsSearchOpen(false);
   };
 
@@ -232,12 +218,10 @@ export default function LedgerPage() {
             />
           </div>
 
-          
-
           {/* Account */}
           <div className="md:col-span-6">
             <label className="block text-xs font-bold text-[#0F172A] dark:text-slate-300 mb-1.5">
-              Account (گاہک کھاتہ)
+              Account (سپلائر کھاتہ)
             </label>
 
             <div className="flex relative w-full mt-1">
@@ -246,7 +230,7 @@ export default function LedgerPage() {
                 onClick={() => setIsSearchOpen(true)}
                 dir="rtl"
               >
-                {customer ? `${customer.code} - ${customer.nameUrdu}` : <span className="text-gray-400 font-normal text-sm">گاہک کا اکاؤنٹ تلاش کریں (Search Customer...)</span>}
+                {supplier ? `${supplier.code} - ${supplier.nameUrdu}` : <span className="text-gray-400 font-normal text-sm">سپلائر کا اکاؤنٹ تلاش کریں (Search Supplier...)</span>}
               </div>
               <button onClick={() => setIsSearchOpen(true)} className="absolute left-0 top-0 bottom-0 bg-slate-100 dark:bg-slate-600 rounded-l-xl px-3.5 border-r border-slate-200 dark:border-slate-600 hover:bg-slate-200 transition-colors flex items-center justify-center">
                 <Search className="w-5 h-5 text-slate-500 dark:text-slate-300" />
@@ -263,7 +247,7 @@ export default function LedgerPage() {
             <input
               type="text"
               readOnly
-              value={customer?.code ?? ""}
+              value={supplier?.code ?? ""}
               className="w-full border border-[#E2E8F0] dark:border-slate-600 rounded-lg p-3 outline-none bg-slate-50 dark:bg-slate-700 font-bold text-[#06b6d4] text-sm text-center"
             />
           </div>
@@ -316,13 +300,13 @@ export default function LedgerPage() {
         </div>
       </div>
 
-      {!customer ? (
+      {!supplier ? (
         <div className="print:hidden mt-8 bg-white border border-slate-100 rounded-2xl p-16 flex flex-col items-center justify-center text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <div className="w-20 h-20 bg-cyan-50 rounded-full flex items-center justify-center mb-4">
             <Search className="w-10 h-10 text-cyan-400" />
           </div>
           <h3 className="text-xl font-bold text-slate-800 mb-2">No Account Selected</h3>
-          <p className="text-slate-500 max-w-md font-urdu text-sm leading-relaxed">براہ کرم لیجر دیکھنے کے لیے اوپر دیے گئے سرچ بار سے کسی گاہک کا انتخاب کریں۔ (Please select a customer from the search bar above to view their ledger.)</p>
+          <p className="text-slate-500 max-w-md font-urdu text-sm leading-relaxed">براہ کرم لیجر دیکھنے کے لیے اوپر دیے گئے سرچ بار سے کسی سپلائر کا انتخاب کریں۔ (Please select a supplier from the search bar above to view their ledger.)</p>
         </div>
       ) : (
       <>
@@ -341,11 +325,11 @@ export default function LedgerPage() {
                 <span className="font-urdu text-xs opacity-90">(کھاتہ کی تفصیل)</span>
               </div>
               <div className="text-2xl font-black text-slate-800 dark:text-white mt-2 text-start font-urdu flex items-center gap-3">
-                {customer?.nameUrdu} <span className="text-lg font-bold text-[#06b6d4] font-sans">{customer?.nameEnglish}</span>
+                {supplier?.nameUrdu} <span className="text-lg font-bold text-[#06b6d4] font-sans">{supplier?.nameEnglish}</span>
               </div>
               <div className="flex items-center gap-2 mt-1">
                 <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs font-bold border border-slate-200">
-                  Code: {customer?.code}
+                  Code: {supplier?.code}
                 </span>
                 <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded text-xs font-bold border border-emerald-100">
                   Active
@@ -513,7 +497,6 @@ export default function LedgerPage() {
         </button>
 
       </div>
-
       </>
       )}
 
@@ -521,7 +504,7 @@ export default function LedgerPage() {
         isOpen={isSearchOpen} 
         onClose={() => setIsSearchOpen(false)} 
         onSelect={handleAccountSelect}
-        typeFilter="گاہک"
+        typeFilter="بیوپاری"
       />
     </div>
   );

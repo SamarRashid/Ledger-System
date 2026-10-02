@@ -25,7 +25,9 @@ export function Header({ onMobileMenuClick, isSidebarPinned, setIsSidebarPinned 
   // Simple route name mapper for header title
   const getPageTitle = () => {
     if (pathname?.includes('dashboard')) return 'Dashboard (ڈیش بورڈ)';
+    if (pathname?.includes('reports/daily-sale-book')) return 'Daily Sale Book (روزانہ سیل بک)';
     if (pathname?.includes('billing')) return 'Billing / Invoice (بیوپاری بل)';
+    if (pathname?.includes('supplier-ledger')) return 'Supplier Ledger (سپلائر کھاتہ)';
     if (pathname?.includes('ledger')) return 'Customer Ledger (گاہک کھاتہ)';
     if (pathname?.includes('cash-receipt')) return 'Cash Receipt (کیش وصولی)';
     if (pathname?.includes('cash-payment')) return 'Cash Payment (نام ادائیگی)';
