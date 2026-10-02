@@ -1,12 +1,29 @@
 "use client";
 
-import React, { useState } from "react";
-import { Receipt, Search, Save, X, Clock, CheckCircle, RotateCcw, Edit3 } from "lucide-react";
-import { AccountSearchModal, Account } from "@/components/AccountSearchModal";
+import React, { useEffect, useState } from "react";
+import {
+  Receipt,
+  Search,
+  Save,
+  X,
+  CheckCircle,
+  Edit3,
+  CalendarDays,
+} from "lucide-react";
+
+import {
+  AccountSearchModal,
+  Account,
+} from "@/components/AccountSearchModal";
+
+// ============================================================
+// TYPES
+// ============================================================
 
 interface ReceiptRecord {
-  id: number;
+  id: string;
   date: string;
+  customerId: string;
   customerCode: string;
   customerNameUrdu: string;
   customerNameEnglish: string;
@@ -16,404 +33,1374 @@ interface ReceiptRecord {
   remainingBalance: number;
 }
 
+interface CustomerBalance {
+  openingBalance: number;
+  previousBalance: number;
+  remainingBalance: number;
+}
+
+// ============================================================
+// PAGE
+// ============================================================
+
 export default function CashReceiptPage(): React.JSX.Element {
-  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Account | null>(null);
+  const API_URL =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
-  const [date, setDate] = useState<string>(new Date().toISOString().split("T")[0]);
-  const [amountReceived, setAmountReceived] = useState<number | "">("");
-  const [description, setDescription] = useState<string>("");
-  const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
+  // ==========================================================
+  // TODAY DATE
+  // ==========================================================
 
-  // Editing State
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const getTodayDate = (): string => {
+    return new Date().toISOString().split("T")[0];
+  };
 
-  // Saved Receipts List State
-  const [recentReceipts, setRecentReceipts] = useState<ReceiptRecord[]>([]);
+  // ==========================================================
+  // CUSTOMER
+  // ==========================================================
 
-  // Mock balance calculation
-  const currentBalance: number = selectedCustomer ? Number(selectedCustomer.openingBalance) || 0 : 0;
-  const received: number = Number(amountReceived) || 0;
-  const updatedBalance: number = currentBalance - received;
+  const [isSearchOpen, setIsSearchOpen] =
+    useState<boolean>(false);
 
-  // Fetch Receipts from Backend
+  const [selectedCustomer, setSelectedCustomer] =
+    useState<Account | null>(null);
+
+  // ==========================================================
+  // FORM
+  // ==========================================================
+
+  const [date, setDate] = useState<string>(
+    getTodayDate()
+  );
+
+  const [amountReceived, setAmountReceived] =
+    useState<number | "">("");
+
+  const [description, setDescription] =
+    useState<string>("");
+
+  // ==========================================================
+  // RECEIPT DATE FILTER
+  // DEFAULT = TODAY
+  // ==========================================================
+
+  const [filterDate, setFilterDate] =
+    useState<string>(getTodayDate());
+
+  // ==========================================================
+  // BALANCE
+  // ==========================================================
+
+  const [customerBalance, setCustomerBalance] =
+    useState<CustomerBalance | null>(null);
+
+  const [loadingBalance, setLoadingBalance] =
+    useState<boolean>(false);
+
+  // ==========================================================
+  // RECEIPTS
+  // ==========================================================
+
+  const [recentReceipts, setRecentReceipts] =
+    useState<ReceiptRecord[]>([]);
+
+  const [loadingReceipts, setLoadingReceipts] =
+    useState<boolean>(false);
+
+  // ==========================================================
+  // EDIT
+  // ==========================================================
+
+  const [editingId, setEditingId] =
+    useState<string | null>(null);
+
+  // ==========================================================
+  // FETCH RECEIPTS
+  // ==========================================================
+
   const fetchReceipts = async () => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-      const res = await fetch(`${API_URL}/api/receipts`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && Array.isArray(data.data)) {
-          setRecentReceipts(
-            data.data.map((r: any) => ({
-              id: r._id,
-              date: r.date,
-              customerCode: r.customer?.code || "-",
-              customerNameUrdu: r.customer?.nameUrdu || "-",
-              customerNameEnglish: r.customer?.nameEnglish || "-",
-              amount: r.amount,
-              description: r.note || "",
-              previousBalance: Number(r.customer?.openingBalance) || 0,
-              remainingBalance: (Number(r.customer?.openingBalance) || 0) - Number(r.amount)
-            }))
-          );
+      setLoadingReceipts(true);
+
+      const response = await fetch(
+        `${API_URL}/api/receipts`,
+        {
+          cache: "no-store",
         }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch receipts: ${response.status}`
+        );
       }
-    } catch (err) {
-      console.error("Failed to fetch receipts", err);
+
+      const result = await response.json();
+
+      console.log(
+        "RECEIPTS API RESPONSE:",
+        result
+      );
+
+      const receipts = Array.isArray(result.receipts)
+        ? result.receipts
+        : [];
+
+      const mappedReceipts: ReceiptRecord[] =
+        receipts.map((r: any) => ({
+          id: String(
+            r._id || r.id || ""
+          ),
+
+          date: r.date
+            ? String(r.date).split("T")[0]
+            : "",
+
+          customerId: String(
+            r.customer?._id ||
+              r.customerId ||
+              ""
+          ),
+
+          customerCode:
+            r.customerCode ||
+            r.customer?.code ||
+            "",
+
+          customerNameUrdu:
+            r.customerNameUrdu ||
+            r.customer?.nameUrdu ||
+            "",
+
+          customerNameEnglish:
+            r.customerNameEnglish ||
+            r.customer?.nameEnglish ||
+            "",
+
+          amount: Number(
+            r.amount ||
+              r.netAmount ||
+              0
+          ),
+
+          description:
+            r.note ||
+            r.description ||
+            "",
+
+          previousBalance: Number(
+            r.previousBalance ?? 0
+          ),
+
+          remainingBalance: Number(
+            r.remainingBalance ?? 0
+          ),
+        }));
+
+      console.log(
+        "MAPPED RECEIPTS:",
+        mappedReceipts
+      );
+
+      setRecentReceipts(
+        mappedReceipts
+      );
+    } catch (error) {
+      console.error(
+        "FETCH RECEIPTS ERROR:",
+        error
+      );
+
+      setRecentReceipts([]);
+    } finally {
+      setLoadingReceipts(false);
     }
   };
 
-  React.useEffect(() => {
+  // ==========================================================
+  // FETCH CUSTOMER BALANCE
+  // ==========================================================
+
+  const fetchCustomerBalance = async (
+    customerId: string
+  ) => {
+    try {
+      setLoadingBalance(true);
+
+      const response = await fetch(
+        `${API_URL}/api/customerledgers/customer/${customerId}/balance`,
+        {
+          cache: "no-store",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Failed to fetch customer ledger balance"
+        );
+      }
+
+      const data = await response.json();
+
+      console.log(
+        "CUSTOMER BALANCE RESPONSE:",
+        data
+      );
+
+      if (!data.success) {
+        throw new Error(
+          data.message ||
+            "Balance not found"
+        );
+      }
+
+      setCustomerBalance({
+        openingBalance: Number(
+          data.data?.openingBalance ?? 0
+        ),
+
+        previousBalance: Number(
+          data.data?.previousBalance ?? 0
+        ),
+
+        remainingBalance: Number(
+          data.data?.remainingBalance ??
+            data.data?.previousBalance ??
+            0
+        ),
+      });
+    } catch (error) {
+      console.error(
+        "FAILED TO FETCH CUSTOMER BALANCE:",
+        error
+      );
+
+      const openingBalance = Number(
+        selectedCustomer?.openingBalance ?? 0
+      );
+
+      setCustomerBalance({
+        openingBalance,
+        previousBalance: openingBalance,
+        remainingBalance: openingBalance,
+      });
+    } finally {
+      setLoadingBalance(false);
+    }
+  };
+
+  // ==========================================================
+  // INITIAL LOAD
+  // ==========================================================
+
+  useEffect(() => {
     fetchReceipts();
   }, []);
 
-  // Form Reset Function
-  const handleResetForm = (): void => {
+  // ==========================================================
+  // FILTER RECEIPTS BY DATE
+  // ==========================================================
+
+  const filteredReceipts =
+    filterDate === ""
+      ? recentReceipts
+      : recentReceipts.filter(
+          (record) =>
+            record.date === filterDate
+        );
+
+  // ==========================================================
+  // CUSTOMER SELECT
+  // ==========================================================
+
+  const handleCustomerSelect = (
+    customer: Account
+  ) => {
+    setSelectedCustomer(customer);
+    setIsSearchOpen(false);
+
+    const customerId = String(
+      customer.id || ""
+    );
+
+    if (customerId) {
+      fetchCustomerBalance(customerId);
+    }
+  };
+
+  // ==========================================================
+  // CALCULATE BALANCE
+  // ==========================================================
+
+  const received =
+    Number(amountReceived) || 0;
+
+  const currentBalance =
+    customerBalance?.previousBalance ||
+    selectedCustomer?.openingBalance ||
+    0;
+
+  const updatedBalance =
+    currentBalance - received;
+
+  // ==========================================================
+  // RESET FORM
+  // ==========================================================
+
+  const handleResetForm = () => {
     setSelectedCustomer(null);
+
     setAmountReceived("");
+
     setDescription("");
-    setDate(new Date().toISOString().split("T")[0]);
+
+    setCustomerBalance(null);
+
+    setDate(getTodayDate());
+
     setEditingId(null);
   };
 
-  // Edit Record Handler (Fixed Type Issue)
-  const handleEditRecord = (record: ReceiptRecord): void => {
+  // ==========================================================
+  // EDIT
+  // ==========================================================
+
+  const handleEditRecord = (
+    record: ReceiptRecord
+  ) => {
     setEditingId(record.id);
+
     setSelectedCustomer({
-      id: record.id, // Number ID passed here instead of string
+      id: record.customerId,
       code: record.customerCode,
-      nameUrdu: record.customerNameUrdu,
-      nameEnglish: record.customerNameEnglish,
+      nameUrdu:
+        record.customerNameUrdu,
+      nameEnglish:
+        record.customerNameEnglish,
     } as Account);
+
     setDate(record.date);
+
     setAmountReceived(record.amount);
+
     setDescription(record.description);
+
+    if (record.customerId) {
+      fetchCustomerBalance(
+        record.customerId
+      );
+    }
   };
 
-  // Save / Update Record Handler
-  const handleSaveReceipt = async (): Promise<void> => {
+  // ==========================================================
+  // SAVE RECEIPT
+  // ==========================================================
+
+  const handleSaveReceipt = async () => {
     if (!selectedCustomer) {
-      alert("براہ کرم پہلے گاہک (Customer) منتخب کریں۔");
+      alert(
+        "براہ کرم پہلے گاہک (Customer) منتخب کریں۔"
+      );
       return;
     }
 
-    if (!amountReceived || Number(amountReceived) <= 0) {
-      alert("براہ کرم درست رقم (Amount) درج کریں۔");
+    if (
+      !amountReceived ||
+      Number(amountReceived) <= 0
+    ) {
+      alert(
+        "براہ کرم درست رقم (Amount) درج کریں۔"
+      );
+      return;
+    }
+
+    const customerId = String(
+      selectedCustomer.id || ""
+    );
+
+    if (!customerId) {
+      alert(
+        "Customer ID نہیں ملی۔"
+      );
+      return;
+    }
+
+    if (loadingBalance) {
+      alert(
+        "Customer balance load ہو رہا ہے، براہ کرم انتظار کریں۔"
+      );
       return;
     }
 
     const payload = {
-      date,
-      receiptNo: `REC-${Date.now()}`,
-      customer: selectedCustomer,
-      amount: Number(amountReceived),
-      discount: 0,
-      netAmount: Number(amountReceived),
-      note: description || "کیش وصولی"
+      date: date,
+
+      receiptNo:
+        `REC-${Date.now()}`,
+
+      customerId,
+
+      customerCode:
+        selectedCustomer.code || "",
+
+      customerNameUrdu:
+        selectedCustomer.nameUrdu || "",
+
+      customerNameEnglish:
+        selectedCustomer.nameEnglish || "",
+
+      amount:
+        Number(amountReceived),
+
+      note:
+        description ||
+        "کیش وصولی",
     };
 
-    try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-      // We don't support UPDATE yet in backend, only CREATE
-      const response = await fetch(`${API_URL}/api/receipts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
+    console.log(
+      "SAVE RECEIPT PAYLOAD:",
+      payload
+    );
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          fetchReceipts();
-          handleResetForm();
-        } else {
-          alert("Error: " + data.message);
-        }
-      } else {
-        alert("Failed to save receipt to server.");
+    try {
+      const response =
+        await fetch(
+          `${API_URL}/api/receipts`,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(
+                payload
+              ),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      console.log(
+        "SAVE RECEIPT RESPONSE:",
+        data
+      );
+
+      if (
+        !response.ok ||
+        !data.success
+      ) {
+        alert(
+          data.message ||
+            "Receipt save نہیں ہوئی۔"
+        );
+
+        return;
       }
-    } catch (e) {
-      console.error(e);
-      alert("Error saving receipt.");
+
+      // Refresh receipt table
+      await fetchReceipts();
+
+      // Refresh balance
+      await fetchCustomerBalance(
+        customerId
+      );
+
+      alert(
+        editingId
+          ? "Receipt successfully updated."
+          : "Receipt successfully saved."
+      );
+
+      handleResetForm();
+    } catch (error) {
+      console.error(
+        "SAVE RECEIPT ERROR:",
+        error
+      );
+
+      alert(
+        "Error saving receipt."
+      );
     }
   };
 
-  return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-24 relative min-h-[calc(100vh-6rem)]">
-      {/* HEADER SECTION */}
-     
+  // ==========================================================
+  // UI
+  // ==========================================================
 
-      {/* INPUT FORM SECTION */}
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-6 transition-colors">
+  return (
+    <div
+      className="
+        max-w-5xl
+        mx-auto
+        space-y-6
+        pb-24
+        relative
+        min-h-[calc(100vh-6rem)]
+      "
+    >
+      {/* ======================================================
+          FORM
+      ====================================================== */}
+
+      <div
+        className="
+          bg-white
+          dark:bg-slate-800
+          p-6
+          rounded-xl
+          shadow-sm
+          border
+          border-slate-200
+          dark:border-slate-700
+          space-y-6
+        "
+      >
+        {/* EDIT MESSAGE */}
+
         {editingId && (
-          <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700/50 text-amber-800 dark:text-amber-300 text-xs px-4 py-2 rounded-lg flex justify-between items-center font-bold">
-            <span>آپ اینٹری میں تبدیلی (Edit) کر رہے ہیں۔</span>
+          <div
+            className="
+              bg-amber-50
+              dark:bg-amber-900/30
+              border
+              border-amber-200
+              dark:border-amber-700
+              text-amber-800
+              px-4
+              py-2
+              rounded-lg
+              flex
+              justify-between
+              items-center
+              text-xs
+              font-bold
+            "
+          >
+            <span>
+              آپ اینٹری میں تبدیلی
+              (Edit) کر رہے ہیں۔
+            </span>
+
             <button
-              onClick={handleResetForm}
-              className="text-amber-900 dark:text-amber-200 underline hover:text-amber-700 dark:hover:text-amber-100 text-xs"
+              onClick={
+                handleResetForm
+              }
+              className="underline"
             >
               منسوخ کریں
             </button>
           </div>
         )}
 
-        {/* Form Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 items-end" dir="rtl">
-          {/* Date */}
+        {/* ====================================================
+            FORM GRID
+        ==================================================== */}
+
+        <div
+          className="
+            grid
+            grid-cols-1
+            md:grid-cols-2
+            lg:grid-cols-12
+            gap-4
+            items-end
+          "
+          dir="rtl"
+        >
+          {/* DATE */}
+
           <div className="lg:col-span-2">
-            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">تاریخ (Date)</label>
+            <label
+              className="
+                block
+                text-sm
+                font-bold
+                text-slate-700
+                dark:text-slate-300
+                mb-2
+              "
+            >
+              تاریخ (Date)
+            </label>
+
             <input
               type="date"
               value={date}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDate(e.target.value)}
-              className="w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0e4a86] bg-slate-50 dark:bg-slate-700/50 text-slate-900 dark:text-white text-sm"
+              onChange={(e) =>
+                setDate(
+                  e.target.value
+                )
+              }
+              className="
+                w-full
+                p-2.5
+                border
+                border-slate-300
+                rounded-lg
+                bg-slate-50
+                dark:bg-slate-700
+                text-sm
+              "
             />
           </div>
 
-          {/* Customer */}
+          {/* CUSTOMER */}
+
           <div className="lg:col-span-4">
-            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">گاہک (Customer)</label>
-            <div className="flex relative">
+            <label
+              className="
+                block
+                text-sm
+                font-bold
+                text-slate-700
+                dark:text-slate-300
+                mb-2
+              "
+            >
+              گاہک (Customer)
+            </label>
+
+            <div className="flex">
               <input
                 type="text"
-                value={selectedCustomer ? `${selectedCustomer.nameUrdu} (${selectedCustomer.code || selectedCustomer.id})` : ""}
+                value={
+                  selectedCustomer
+                    ? `${
+                        selectedCustomer.nameUrdu ||
+                        selectedCustomer.nameEnglish ||
+                        ""
+                      } (${
+                        selectedCustomer.code ||
+                        selectedCustomer.id
+                      })`
+                    : ""
+                }
                 readOnly
                 placeholder="گاہک منتخب کریں"
-                className="w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-r-lg bg-indigo-50 dark:bg-indigo-900/20 text-slate-900 dark:text-white font-urdu text-[15px] leading-relaxed focus:outline-none cursor-pointer"
-                onClick={() => setIsSearchOpen(true)}
+                onClick={() =>
+                  setIsSearchOpen(
+                    true
+                  )
+                }
+                className="
+                  w-full
+                  p-2.5
+                  border
+                  border-slate-300
+                  rounded-r-lg
+                  bg-indigo-50
+                  cursor-pointer
+                "
               />
+
               <button
                 type="button"
-                onClick={() => setIsSearchOpen(true)}
-                className="bg-indigo-100 dark:bg-indigo-900/40 px-4 border border-r-0 border-slate-300 dark:border-slate-600 rounded-l-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition-colors cursor-pointer"
+                onClick={() =>
+                  setIsSearchOpen(
+                    true
+                  )
+                }
+                className="
+                  bg-indigo-100
+                  px-4
+                  border
+                  border-r-0
+                  border-slate-300
+                  rounded-l-lg
+                "
               >
-                <Search className="w-4 h-4 text-indigo-700 dark:text-indigo-400" />
+                <Search className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* Amount */}
+          {/* AMOUNT */}
+
           <div className="lg:col-span-3">
-            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">رقم (Amount RS)</label>
+            <label
+              className="
+                block
+                text-sm
+                font-bold
+                text-slate-700
+                mb-2
+              "
+            >
+              رقم (Amount RS)
+            </label>
+
             <input
               type="number"
               min="0"
               value={amountReceived}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setAmountReceived(e.target.value === "" ? "" : Number(e.target.value))
+              onChange={(e) =>
+                setAmountReceived(
+                  e.target.value === ""
+                    ? ""
+                    : Number(
+                        e.target.value
+                      )
+                )
               }
-              className="w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0e4a86] bg-blue-50 dark:bg-blue-900/10 text-base font-bold text-left text-slate-800 dark:text-white"
+              className="
+                w-full
+                p-2.5
+                border
+                border-slate-300
+                rounded-lg
+                bg-blue-50
+                text-base
+                font-bold
+              "
               dir="ltr"
               placeholder="0"
             />
           </div>
 
-          {/* Description */}
+          {/* DESCRIPTION */}
+
           <div className="lg:col-span-3">
-            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">تفصیل (Description)</label>
+            <label
+              className="
+                block
+                text-sm
+                font-bold
+                text-slate-700
+                mb-2
+              "
+            >
+              تفصیل (Description)
+            </label>
+
             <input
               type="text"
               value={description}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDescription(e.target.value)}
+              onChange={(e) =>
+                setDescription(
+                  e.target.value
+                )
+              }
               placeholder="تفصیل لکھیں..."
-              className="w-full p-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0e4a86] text-sm font-urdu bg-slate-50 dark:bg-slate-700/50 text-slate-900 dark:text-white"
+              className="
+                w-full
+                p-2.5
+                border
+                border-slate-300
+                rounded-lg
+                text-sm
+              "
             />
           </div>
         </div>
 
-        {/* Balance Card */}
-        {selectedCustomer && (
-          <div className="bg-[#173753] text-white rounded-xl p-6 shadow-md mt-6 border border-white/10">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x md:divide-x-reverse divide-white/20" dir="rtl">
-              <div className="py-2 md:py-0 text-center md:text-right">
-                <div className="text-white/70 text-sm mb-2 font-medium">موجودہ بیلنس (Current Balance)</div>
-                <div className="text-2xl font-bold font-sans tracking-tight" dir="ltr">
-                  {currentBalance.toLocaleString()} RS
-                </div>
-              </div>
+        {/* ====================================================
+            BALANCE
+        ==================================================== */}
 
-              <div className="py-2 md:py-0 text-center md:text-right px-4">
-                <div className="text-white/70 text-sm mb-2 font-medium">ابھی وصول ہو رہا ہے (Receiving Now)</div>
-                <div className="text-2xl font-bold text-[#0e4a86] font-sans tracking-tight" dir="ltr">
-                  {received.toLocaleString()} RS
-                </div>
-              </div>
+        {selectedCustomer &&
+          customerBalance && (
+            <div
+              className="
+                bg-[#173753]
+                text-white
+                rounded-xl
+                p-6
+                shadow-md
+              "
+            >
+              <div
+                className="
+                  grid
+                  grid-cols-1
+                  md:grid-cols-3
+                  gap-6
+                "
+                dir="rtl"
+              >
+                {/* PREVIOUS */}
 
-              <div className="py-2 md:py-0 text-center md:text-right">
-                <div className="text-white/70 text-sm mb-2 font-medium">باقی بقایا جات (Remaining Balance)</div>
-                <div className="text-2xl font-bold text-white font-sans tracking-tight" dir="ltr">
-                  {updatedBalance.toLocaleString()} RS
+                <div className="text-center">
+                  <div className="text-white/70 text-sm mb-2">
+                    Previous Balance
+                  </div>
+
+                  <div
+                    className="text-2xl font-bold"
+                    dir="ltr"
+                  >
+                    {(
+                      currentBalance ||
+                      selectedCustomer?.openingBalance ||
+                      0
+                    ).toLocaleString()}{" "}
+                    RS
+                  </div>
+                </div>
+
+                {/* RECEIVING */}
+
+                <div className="text-center">
+                  <div className="text-white/70 text-sm mb-2">
+                    ابھی وصول ہو رہا ہے
+                  </div>
+
+                  <div
+                    className="
+                      text-2xl
+                      font-bold
+                      text-emerald-300
+                    "
+                    dir="ltr"
+                  >
+                    {received.toLocaleString()}{" "}
+                    RS
+                  </div>
+                </div>
+
+                {/* REMAINING */}
+
+                <div className="text-center">
+                  <div className="text-white/70 text-sm mb-2">
+                    باقی بقایا جات
+                  </div>
+
+                  <div
+                    className="text-2xl font-bold"
+                    dir="ltr"
+                  >
+                    {updatedBalance.toLocaleString()}{" "}
+                    RS
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
 
-      {/* ACTION BUTTONS (CANCEL & SAVE/UPDATE) */}
-      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex justify-end gap-3 print:hidden transition-colors">
+      {/* ======================================================
+          BUTTONS
+      ====================================================== */}
+
+      <div
+        className="
+          bg-white
+          dark:bg-slate-800
+          p-4
+          rounded-xl
+          border
+          border-slate-200
+          shadow-sm
+          flex
+          justify-end
+          gap-3
+        "
+      >
         <button
           type="button"
-          onClick={handleResetForm}
-          className="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 px-6 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer"
+          onClick={
+            handleResetForm
+          }
+          className="
+            bg-slate-100
+            hover:bg-slate-200
+            text-slate-700
+            px-6
+            py-2.5
+            rounded-lg
+            text-sm
+            font-bold
+            flex
+            items-center
+            gap-2
+          "
         >
           <X className="h-4 w-4" />
-          Cancel (منسوخ کریں)
+          Cancel
         </button>
+
         <button
           type="button"
-          onClick={handleSaveReceipt}
-          className={`px-8 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-sm cursor-pointer text-white ${
-            editingId
-              ? "bg-amber-600 hover:bg-amber-700"
-              : "bg-[#0e4a86] hover:bg-[#0b3c6d]"
-          }`}
+          onClick={
+            handleSaveReceipt
+          }
+          disabled={loadingBalance}
+          className="
+            bg-[#0e4a86]
+            hover:bg-[#0b3c6d]
+            disabled:opacity-50
+            disabled:cursor-not-allowed
+            px-8
+            py-2.5
+            rounded-lg
+            text-sm
+            font-bold
+            flex
+            items-center
+            gap-2
+            text-white
+          "
         >
           <Save className="h-4 w-4" />
-          {editingId ? "Update (آپڈیٹ کریں)" : "(Save) محفوظ کریں"}
+
+          {editingId
+            ? "Update Receipt"
+            : "Save Receipt"}
         </button>
       </div>
 
-      {/* SAVED RECEIPTS TABLE SECTION */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-4 transition-colors">
-        <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-4">
-          <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-emerald-500" />
-            Saved Receipts Table
-            <span className="font-urdu font-normal text-slate-500 dark:text-slate-400 text-sm">(محفوظ شدہ کیش وصولیاں)</span>
-          </h2>
-          <span className="text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-600">
-            Total Entries: {recentReceipts.length}
+      {/* ======================================================
+          RECEIPT TABLE
+      ====================================================== */}
+
+      <div
+        className="
+          bg-white
+          dark:bg-slate-800
+          rounded-xl
+          shadow-sm
+          border
+          border-slate-200
+          dark:border-slate-700
+          p-6
+        "
+      >
+        {/* ====================================================
+            TABLE HEADER + DATE FILTER
+        ==================================================== */}
+
+        <div
+          className="
+            flex
+            flex-col
+            md:flex-row
+            md:justify-between
+            md:items-center
+            gap-4
+            border-b
+            pb-4
+            mb-4
+          "
+        >
+          {/* HEADING */}
+
+          <div>
+            <h2
+              className="
+                font-bold
+                text-lg
+                flex
+                items-center
+                gap-2
+                text-slate-800
+                dark:text-white
+              "
+            >
+              <CheckCircle
+                className="
+                  h-5
+                  w-5
+                  text-emerald-500
+                "
+              />
+
+              Customer Receipts
+            </h2>
+
+            <p
+              dir="rtl"
+              className="
+                text-sm
+                font-bold
+                text-slate-500
+                dark:text-slate-300
+                mt-1
+              "
+            >
+              کسٹمر وصولیاں
+            </p>
+          </div>
+
+          {/* DATE FILTER */}
+
+          <div
+            className="
+              flex
+              flex-col
+              sm:flex-row
+              sm:items-center
+              gap-2
+            "
+            dir="rtl"
+          >
+            <label
+              className="
+                text-sm
+                font-bold
+                text-slate-600
+                dark:text-slate-300
+                flex
+                items-center
+                gap-1
+              "
+            >
+              <CalendarDays className="w-4 h-4" />
+
+              تاریخ کے مطابق:
+            </label>
+
+            <input
+              type="date"
+              value={filterDate}
+              onChange={(e) =>
+                setFilterDate(
+                  e.target.value
+                )
+              }
+              className="
+                px-3
+                py-2
+                rounded-lg
+                border
+                border-slate-300
+                dark:border-slate-600
+                bg-slate-50
+                dark:bg-slate-700
+                dark:text-white
+                text-sm
+                font-medium
+                focus:outline-none
+                focus:ring-2
+                focus:ring-blue-500
+              "
+            />
+
+            {/* ALL DATES */}
+
+            <button
+              type="button"
+              onClick={() =>
+                setFilterDate("")
+              }
+              className="
+                px-3
+                py-2
+                rounded-lg
+                bg-slate-100
+                hover:bg-slate-200
+                dark:bg-slate-700
+                dark:hover:bg-slate-600
+                text-slate-700
+                dark:text-white
+                text-xs
+                font-bold
+                transition
+              "
+            >
+              All Dates
+            </button>
+          </div>
+
+          {/* TOTAL */}
+
+          <span
+            className="
+              text-xs
+              font-bold
+              bg-slate-100
+              dark:bg-slate-700
+              px-3
+              py-1.5
+              rounded-full
+              whitespace-nowrap
+            "
+          >
+            Total Entries:
+            {" "}
+            {filteredReceipts.length}
           </span>
         </div>
 
-        {recentReceipts.length === 0 ? (
-          <div className="text-center py-12 text-slate-400 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 space-y-2">
-            <Receipt className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600" />
-            <p className="text-sm font-bold text-slate-600 dark:text-slate-400">کوئی ریکارڈ محفوظ نہیں ہے</p>
-            <p className="text-xs text-slate-500">اوپر فارم پر گاہک کی تفصیل بھر کر &quot;Save (محفوظ کریں)&quot; دبائیں۔</p>
+        {/* SELECTED DATE MESSAGE */}
+
+        <div
+          className="
+            mb-4
+            flex
+            items-center
+            justify-between
+            bg-blue-50
+            dark:bg-blue-900/20
+            border
+            border-blue-100
+            dark:border-blue-800
+            rounded-lg
+            px-4
+            py-2
+          "
+          dir="rtl"
+        >
+          <span
+            className="
+              text-sm
+              font-bold
+              text-blue-800
+              dark:text-blue-300
+            "
+          >
+            {filterDate
+              ? `تاریخ: ${filterDate}`
+              : "تمام تاریخوں کی وصولیاں"}
+          </span>
+
+          {filterDate ===
+            getTodayDate() && (
+            <span
+              className="
+                text-xs
+                font-bold
+                bg-blue-600
+                text-white
+                px-3
+                py-1
+                rounded-full
+              "
+            >
+              آج
+            </span>
+          )}
+        </div>
+
+        {/* ====================================================
+            LOADING
+        ==================================================== */}
+
+        {loadingReceipts ? (
+          <div className="text-center py-10">
+            Loading receipts...
+          </div>
+        ) : filteredReceipts.length === 0 ? (
+          <div
+            className="
+              text-center
+              py-12
+              text-slate-400
+              border
+              border-dashed
+              rounded-xl
+            "
+          >
+            <Receipt
+              className="
+                w-10
+                h-10
+                mx-auto
+                mb-2
+              "
+            />
+
+            <div className="font-bold">
+              کوئی ریکارڈ محفوظ نہیں ہے
+            </div>
+
+            {filterDate && (
+              <div className="text-xs mt-1">
+                اس تاریخ کے لیے کوئی Receipt موجود نہیں
+              </div>
+            )}
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-            <table className="w-full text-left border-collapse text-xs">
+          <div
+            className="
+              overflow-x-auto
+              rounded-lg
+              border
+            "
+          >
+            <table
+              className="
+                w-full
+                text-left
+                border-collapse
+                text-xs
+              "
+            >
               <thead>
-                <tr className="bg-[#0e4a86] text-white font-bold uppercase tracking-wider text-[11px]">
-                  <th className="p-3.5 border-r border-white/20 text-center w-12">#</th>
-                  <th className="p-3.5 border-r border-white/20 w-28">Date (تاریخ)</th>
-                  <th className="p-3.5 border-r border-white/20">Customer (گاہک)</th>
-                  <th className="p-3.5 border-r border-white/20">Description (تفصیل)</th>
-                  <th className="p-3.5 border-r border-white/20 text-right w-32">Received Amount</th>
-                  <th className="p-3.5 border-r border-white/20 text-right w-32">Remaining Bal.</th>
-                  <th className="p-3.5 text-center w-16">Action</th>
+                <tr
+                  className="
+                    bg-[#0e4a86]
+                    text-white
+                    font-bold
+                  "
+                >
+                  <th className="p-3">
+                    #
+                  </th>
+
+                  <th className="p-3">
+                    Date
+                  </th>
+
+                  <th className="p-3">
+                    Customer
+                  </th>
+
+                  <th className="p-3">
+                    Previous Balance
+                  </th>
+
+                  <th className="p-3">
+                    Received
+                  </th>
+
+                  <th className="p-3">
+                    Remaining
+                  </th>
+
+                  <th className="p-3">
+                    Description
+                  </th>
+
+                  <th className="p-3">
+                    Action
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700 font-medium text-slate-700 dark:text-slate-300">
-                {recentReceipts.map((record, index) => (
-                  <tr
-                    key={record.id}
-                    className={`transition-colors ${
-                      editingId === record.id ? "bg-amber-50/70 dark:bg-amber-900/20" : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                    }`}
-                  >
-                    <td className="p-3 text-center border-r border-slate-100 dark:border-slate-700 font-bold text-slate-400">
-                      {recentReceipts.length - index}
-                    </td>
-                    <td className="p-3 border-r border-slate-100 dark:border-slate-700 font-mono text-slate-600 dark:text-slate-400 font-semibold">
-                      {record.date}
-                    </td>
-                    <td className="p-3 border-r border-slate-100 dark:border-slate-700 font-urdu font-bold text-slate-900 dark:text-white text-sm">
-                      {record.customerNameUrdu} ({record.customerCode})
-                    </td>
-                    <td className="p-3 border-r border-slate-100 dark:border-slate-700 font-urdu font-medium text-slate-700 dark:text-slate-300">
-                      {record.description}
-                    </td>
-                    <td className="p-3 border-r border-slate-100 dark:border-slate-700 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/40 dark:bg-emerald-900/10">
-                      RS {record.amount.toLocaleString()}
-                    </td>
-                    <td className="p-3 border-r border-slate-100 dark:border-slate-700 text-right font-mono font-bold text-slate-800 dark:text-slate-200 bg-slate-50/50 dark:bg-slate-800/50">
-                      RS {record.remainingBalance.toLocaleString()}
-                    </td>
-                    <td className="p-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleEditRecord(record)}
-                        className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 p-1.5 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
-                        title="ترمیم کریں (Edit)"
+
+              <tbody>
+                {filteredReceipts.map(
+                  (record, index) => (
+                    <tr
+                      key={record.id}
+                      className="
+                        border-b
+                        hover:bg-slate-50
+                        dark:hover:bg-slate-700/50
+                      "
+                    >
+                      {/* INDEX */}
+
+                      <td className="p-3">
+                        {index + 1}
+                      </td>
+
+                      {/* DATE */}
+
+                      <td className="p-3">
+                        {record.date}
+                      </td>
+
+                      {/* CUSTOMER */}
+
+                      <td
+                        className="
+                          p-3
+                          font-bold
+                        "
                       >
-                        <Edit3 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                        {record.customerNameUrdu ||
+                          record.customerNameEnglish ||
+                          "-"}
+
+                        {" "}
+
+                        {record.customerCode &&
+                          `(${record.customerCode})`}
+                      </td>
+
+                      {/* PREVIOUS BALANCE */}
+
+                      <td
+                        className="
+                          p-3
+                          text-right
+                          font-bold
+                        "
+                      >
+                        RS{" "}
+                        {record.previousBalance.toLocaleString()}
+                      </td>
+
+                      {/* RECEIVED */}
+
+                      <td
+                        className="
+                          p-3
+                          text-right
+                          font-bold
+                          text-emerald-600
+                        "
+                      >
+                        RS{" "}
+                        {record.amount.toLocaleString()}
+                      </td>
+
+                      {/* REMAINING */}
+
+                      <td
+                        className="
+                          p-3
+                          text-right
+                          font-bold
+                        "
+                      >
+                        RS{" "}
+                        {record.remainingBalance.toLocaleString()}
+                      </td>
+
+                      {/* DESCRIPTION */}
+
+                      <td className="p-3">
+                        {record.description}
+                      </td>
+
+                      {/* EDIT */}
+
+                      <td className="p-3">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleEditRecord(
+                              record
+                            )
+                          }
+                          className="
+                            text-indigo-600
+                            p-1.5
+                            rounded-md
+                            hover:bg-indigo-50
+                          "
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                )}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {/* Account Search Modal */}
+      {/* ======================================================
+          CUSTOMER SEARCH
+      ====================================================== */}
+
       <AccountSearchModal
         isOpen={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-        onSelect={(acc: Account) => setSelectedCustomer(acc)}
+        onClose={() =>
+          setIsSearchOpen(false)
+        }
+        onSelect={
+          handleCustomerSelect
+        }
         typeFilter="گاہک"
       />
-
-      {/* Recent History Modal */}
-      {isHistoryOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col border border-slate-200 overflow-hidden">
-            <div className="flex justify-between items-center p-4 bg-slate-50 border-b border-slate-200">
-              <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
-                <Clock className="h-5 w-5 text-slate-500" />
-                Recent Cash Receipts (پچھلی کیش وصولیاں)
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsHistoryOpen(false)}
-                className="text-slate-500 hover:bg-slate-200 p-1.5 rounded-md transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
-              {recentReceipts.length === 0 ? (
-                <div className="text-center py-16 text-slate-500 text-sm bg-slate-50/50 h-full flex flex-col items-center justify-center">
-                  <Receipt className="w-12 h-12 text-slate-300 mb-3" />
-                  <p>No recent receipts found.</p>
-                </div>
-              ) : (
-                <table className="w-full text-left whitespace-nowrap text-sm border-collapse">
-                  <thead className="bg-slate-100 sticky top-0 z-10 border-b border-slate-200">
-                    <tr>
-                      <th className="p-3 font-semibold text-slate-600 border-r border-slate-200">Date (تاریخ)</th>
-                      <th className="p-3 font-semibold text-slate-600 border-r border-slate-200">Customer (کسٹمر)</th>
-                      <th className="p-3 font-semibold text-slate-600 border-r border-slate-200">Description (تفصیل)</th>
-                      <th className="p-3 font-semibold text-slate-600 text-end">Amount (رقم)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {recentReceipts.map((r) => (
-                      <tr key={r.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-3 border-r border-slate-100 text-slate-600">{r.date}</td>
-                        <td className="p-3 border-r border-slate-100 font-bold text-slate-800 font-urdu">
-                          {r.customerNameUrdu} ({r.customerCode})
-                        </td>
-                        <td className="p-3 border-r border-slate-100 font-urdu text-slate-600">
-                          {r.description || "کیش وصولی"}
-                        </td>
-                        <td className="p-3 text-end font-bold text-[#0e4a86]">{r.amount.toLocaleString()} RS</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

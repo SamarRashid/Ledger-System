@@ -1,15 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Search, Save, Printer, Plus, ChevronDown, ChevronUp, X, CheckCircle2, Maximize } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import {
+  Search,
+  Save,
+  Printer,
+  Plus,
+  X,
+  Maximize,
+} from "lucide-react";
+
 import { cn } from "@/components/layout/Header";
-import { AccountSearchModal, Account } from "@/components/AccountSearchModal";
+import {
+  AccountSearchModal,
+  Account,
+} from "@/components/AccountSearchModal";
 import { ItemSearchModal } from "@/components/ItemSearchModal";
 import { ItemSizeSearchModal } from "@/components/ItemSizeSearchModal";
+
+// ============================================================
+// TYPES
+// ============================================================
 
 type LineItem = {
   id: string;
   item: string;
+  itemSize?: string;
   bags: number;
   weight: number;
   rate: number;
@@ -18,103 +34,525 @@ type LineItem = {
   commissionPct: number | "";
 };
 
+type BalanceData = {
+  customerId?: string;
+  customerCode?: string;
+  customerNameUrdu?: string;
+  customerNameEnglish?: string;
+  openingBalance?: number;
+  previousBalance?: number;
+  remainingBalance?: number;
+};
+
+type BalanceState = {
+  loading: boolean;
+  balance: number;
+  error: boolean;
+};
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+const getAccountId = (account: Account | null): string => {
+  if (!account) return "";
+
+  const acc = account as any;
+
+  return String(
+    acc._id ||
+      acc.id ||
+      acc.customerId ||
+      acc.accountId ||
+      ""
+  );
+};
+
+const formatMoney = (value: number | string | undefined | null) => {
+  const number = Number(value) || 0;
+
+  return number.toLocaleString("en-PK", {
+    maximumFractionDigits: 2,
+  });
+};
+
+const getTodayDate = () => {
+  const now = new Date();
+
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+// ============================================================
+// COMPONENT
+// ============================================================
+
 export default function BillingPage() {
-  const [isFullScreenUI, setIsFullScreenUI] = useState<boolean>(false);
+  // ============================================================
+  // UI STATES
+  // ============================================================
+
+  const [isFullScreenUI, setIsFullScreenUI] =
+    useState<boolean>(false);
+
+  const [showToast, setShowToast] =
+    useState<boolean>(false);
+
+  const [isItemSearchOpen, setIsItemSearchOpen] =
+    useState<boolean>(false);
+
+  const [isItemSizeSearchOpen, setIsItemSizeSearchOpen] =
+    useState<boolean>(false);
+
+  const [isSearchOpen, setIsSearchOpen] =
+    useState<boolean>(false);
+
+  const [isBeopariSearchOpen, setIsBeopariSearchOpen] =
+    useState<boolean>(false);
+
+  const [isDeductionsOpen, setIsDeductionsOpen] =
+    useState<boolean>(false);
+
+  // ============================================================
+  // ACCOUNTS
+  // ============================================================
+
+  const [selectedCustomer, setSelectedCustomer] =
+    useState<Account | null>(null);
+
+  const [selectedBeopari, setSelectedBeopari] =
+    useState<Account | null>(null);
+
+  // ============================================================
+  // BALANCES
+  // ============================================================
+
+  const [customerBalance, setCustomerBalance] =
+    useState<BalanceState>({
+      loading: false,
+      balance: 0,
+      error: false,
+    });
+
+  const [beopariBalance, setBeopariBalance] =
+    useState<BalanceState>({
+      loading: false,
+      balance: 0,
+      error: false,
+    });
+
+  // ============================================================
+  // FORM STATES
+  // ============================================================
+
+  const [date, setDate] =
+    useState<string>(getTodayDate());
+
+  const [billNo, setBillNo] =
+    useState<string>("1001");
+
+  const [copyNo, setCopyNo] =
+    useState<string>("");
+
+  const [gaariNo, setGaariNo] =
+    useState<string>("");
+
+  const [item, setItem] =
+    useState<string>("");
+
+  const [commissionPct, setCommissionPct] =
+    useState<number | "">(8);
+
+  const [jama, setJama] =
+    useState<number | "">(0);
+
+  const [itemSize, setItemSize] =
+    useState<string>("");
+
+  const [bags, setBags] =
+    useState<number | "">("");
+
+  const [weight, setWeight] =
+    useState<number | "">("");
+
+  const [rate, setRate] =
+    useState<number | "">("");
+
+  // ============================================================
+  // DEDUCTIONS
+  // ============================================================
+
+  const [freight, setFreight] =
+    useState<number | "">("");
+
+  const [labor, setLabor] =
+    useState<number | "">("");
+
+  const [otherCharges, setOtherCharges] =
+    useState<number | "">("");
+
+  // ============================================================
+  // OTHER
+  // ============================================================
+
+  const [note, setNote] =
+    useState<string>("");
+
+  const [isSaving, setIsSaving] =
+    useState<boolean>(false);
+
+  const API_URL =
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://localhost:5000";
+
+  // ============================================================
+  // LINE ITEMS
+  // ============================================================
+
+  const [lineItems, setLineItems] =
+    useState<LineItem[]>([]);
+
+  // ============================================================
+  // FULLSCREEN LISTENER
+  // ============================================================
 
   useEffect(() => {
     const onFullscreenChange = () => {
-      setIsFullScreenUI(!!document.fullscreenElement);
+      setIsFullScreenUI(
+        !!document.fullscreenElement
+      );
     };
-    document.addEventListener("fullscreenchange", onFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+
+    document.addEventListener(
+      "fullscreenchange",
+      onFullscreenChange
+    );
+
+    return () => {
+      document.removeEventListener(
+        "fullscreenchange",
+        onFullscreenChange
+      );
+    };
   }, []);
+
+  // ============================================================
+  // FETCH LATEST BILL NUMBER
+  // ============================================================
 
   useEffect(() => {
     const fetchLatestBillNo = async () => {
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-        const res = await fetch(`${API_URL}/api/bills`).catch(() => null);
-        if (res && res.ok) {
-          const data = await res.json();
-          if (data.success && data.data && data.data.length > 0) {
-            const maxBillNo = Math.max(...data.data.map((b: any) => parseInt(b.billNo) || 0));
-            if (maxBillNo > 0) {
-              setBillNo((maxBillNo + 1).toString());
-            }
+        const response = await fetch(
+          `${API_URL}/api/bills`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+
+        if (
+          data.success &&
+          Array.isArray(data.data) &&
+          data.data.length > 0
+        ) {
+          const billNumbers = data.data
+            .map((bill: any) =>
+              parseInt(String(bill.billNo), 10)
+            )
+            .filter((number: number) =>
+              Number.isFinite(number)
+            );
+
+          if (billNumbers.length > 0) {
+            const maxBillNo = Math.max(
+              ...billNumbers
+            );
+
+            setBillNo(
+              String(maxBillNo + 1)
+            );
           }
         }
-      } catch (e) {
-        console.error("Failed to fetch latest bill no", e);
+      } catch (error) {
+        console.error(
+          "Failed to fetch latest bill number:",
+          error
+        );
       }
     };
+
     fetchLatestBillNo();
-  }, []);
+  }, [API_URL]);
 
-  const [showToast, setShowToast] = useState<boolean>(false);
-  const [isItemSearchOpen, setIsItemSearchOpen] = useState<boolean>(false);
-  const [isItemSizeSearchOpen, setIsItemSizeSearchOpen] = useState<boolean>(false);
-  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Account | null>(null);
-  
-  const [isBeopariSearchOpen, setIsBeopariSearchOpen] = useState<boolean>(false);
-  const [selectedBeopari, setSelectedBeopari] = useState<Account | null>(null);
+  // ============================================================
+  // FETCH ACCOUNT BALANCE
+  // ============================================================
 
-  // Form State
-  const [date, setDate] = useState<string>(new Date().toISOString().split("T")[0]);
-  const [billNo, setBillNo] = useState<string>("1001");
-  const [copyNo, setCopyNo] = useState<string>("");
-  const [gaariNo, setGaariNo] = useState<string>("");
-  
-  const [item, setItem] = useState<string>("");
-  const [commissionPct, setCommissionPct] = useState<number | "">(8);
-  const [jama, setJama] = useState<number | "">(0);
-  const [itemSize, setItemSize] = useState<string>("");
-  const [bags, setBags] = useState<number | "">("");
-  const [weight, setWeight] = useState<number | "">("");
-  const [rate, setRate] = useState<number | "">("");
-  
-  // Deductions State
-  const [isDeductionsOpen, setIsDeductionsOpen] = useState<boolean>(false);
-  const [freight, setFreight] = useState<number | "">("");
-  const [labor, setLabor] = useState<number | "">("");
-  const [otherCharges, setOtherCharges] = useState<number | "">("");
-  
-  const [note, setNote] = useState<string>("");
-  const [isSaving, setIsSaving] = useState<boolean>(false);
-  
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+  const fetchAccountBalance = useCallback(
+    async (
+      accountId: string,
+      setBalance: React.Dispatch<
+        React.SetStateAction<BalanceState>
+      >
+    ) => {
+      if (!accountId) {
+        setBalance({
+          loading: false,
+          balance: 0,
+          error: false,
+        });
 
-  // Line Items State
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+        return;
+      }
 
-  // Derived Values
-  const totalWeight: number = lineItems.reduce((sum, li) => sum + li.weight, 0);
-  const totalAmount: number = lineItems.reduce((sum, li) => sum + li.amount, 0);
-  const totalCommission: number = lineItems.reduce((sum, li) => sum + (li.amount * ((Number(li.commissionPct) || 0) / 100)), 0); 
-  
-  const totalDeductions: number = Math.max(0, (Number(freight) || 0) + (Number(labor) || 0) + (Number(otherCharges) || 0));
-  const netTotal: number = Math.max(0, totalAmount - totalCommission - totalDeductions);
-  const totalBags: number = lineItems.reduce((sum, li) => sum + (Number(li.bags) || 0), 0);
-  const averageWeight: number | string = totalWeight > 0 ? (totalAmount / totalWeight).toFixed(2) : 0;
+      setBalance((previous) => ({
+        ...previous,
+        loading: true,
+        error: false,
+      }));
+
+      try {
+        const response = await fetch(
+          `${API_URL}/api/customer-ledger/customer/${accountId}/balance`,
+          {
+            method: "GET",
+            cache: "no-store",
+          }
+        );
+
+        const data = await response.json();
+
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            data.message ||
+              "Failed to fetch balance"
+          );
+        }
+
+        const balanceData: BalanceData =
+          data.data || {};
+
+        const remainingBalance =
+          Number(
+            balanceData.remainingBalance
+          ) || 0;
+
+        setBalance({
+          loading: false,
+          balance: remainingBalance,
+          error: false,
+        });
+      } catch (error) {
+        console.error(
+          "Balance fetch error:",
+          error
+        );
+
+        setBalance({
+          loading: false,
+          balance: 0,
+          error: true,
+        });
+      }
+    },
+    [API_URL]
+  );
+
+  // ============================================================
+  // CUSTOMER BALANCE
+  // ============================================================
+
+  useEffect(() => {
+    const customerId =
+      getAccountId(selectedCustomer);
+
+    if (!customerId) {
+      setCustomerBalance({
+        loading: false,
+        balance: 0,
+        error: false,
+      });
+
+      return;
+    }
+
+    fetchAccountBalance(
+      customerId,
+      setCustomerBalance
+    );
+  }, [
+    selectedCustomer,
+    fetchAccountBalance,
+  ]);
+
+  // ============================================================
+  // BEOPARI BALANCE
+  // ============================================================
+
+  useEffect(() => {
+    const beopariId =
+      getAccountId(selectedBeopari);
+
+    if (!beopariId) {
+      setBeopariBalance({
+        loading: false,
+        balance: 0,
+        error: false,
+      });
+
+      return;
+    }
+
+    fetchAccountBalance(
+      beopariId,
+      setBeopariBalance
+    );
+  }, [
+    selectedBeopari,
+    fetchAccountBalance,
+  ]);
+
+  // ============================================================
+  // DERIVED VALUES
+  // ============================================================
+
+  const totalWeight =
+    lineItems.reduce(
+      (sum, li) =>
+        sum + Number(li.weight || 0),
+      0
+    );
+
+  const totalAmount =
+    lineItems.reduce(
+      (sum, li) =>
+        sum + Number(li.amount || 0),
+      0
+    );
+
+  const totalCommission =
+    lineItems.reduce(
+      (sum, li) => {
+        const commission =
+          Number(li.commissionPct) || 0;
+
+        return (
+          sum +
+          li.amount *
+            (commission / 100)
+        );
+      },
+      0
+    );
+
+  const totalDeductions = Math.max(
+    0,
+    (Number(freight) || 0) +
+      (Number(labor) || 0) +
+      (Number(otherCharges) || 0)
+  );
+
+  const netTotal = Math.max(
+    0,
+    totalAmount -
+      totalCommission -
+      totalDeductions
+  );
+
+  const totalBags =
+    lineItems.reduce(
+      (sum, li) =>
+        sum + Number(li.bags || 0),
+      0
+    );
+
+  const averageWeight =
+    totalWeight > 0
+      ? (totalAmount / totalWeight).toFixed(
+          2
+        )
+      : "0.00";
+
+  // ============================================================
+  // ADD LINE ITEM
+  // ============================================================
 
   const handleAddLineItem = () => {
-    if (!item || !weight || !rate) return;
+    if (!selectedCustomer) {
+      alert(
+        "Please select a customer first."
+      );
+
+      return;
+    }
+
+    if (!item) {
+      alert("Please select an item.");
+
+      return;
+    }
+
+    if (
+      weight === "" ||
+      Number(weight) <= 0
+    ) {
+      alert("Please enter valid weight.");
+
+      return;
+    }
+
+    if (
+      rate === "" ||
+      Number(rate) <= 0
+    ) {
+      alert("Please enter valid rate.");
+
+      return;
+    }
+
     const w = Number(weight);
     const r = Number(rate);
     const b = Number(bags) || 0;
-    
-    setLineItems([...lineItems, {
-      id: Math.random().toString(36).substring(7),
-      item,
-      bags: b,
-      weight: w,
-      rate: r,
-      amount: w * r,
-      customer: selectedCustomer,
-      commissionPct: commissionPct
-    }]);
 
-    // Reset inputs except Beopari, CopyNo, and GaariNo
+    const newLineItem: LineItem = {
+      id:
+        Math.random()
+          .toString(36)
+          .substring(2, 10),
+
+      item,
+
+      itemSize,
+
+      bags: b,
+
+      weight: w,
+
+      rate: r,
+
+      amount: w * r,
+
+      customer: selectedCustomer,
+
+      commissionPct,
+    };
+
+    setLineItems((previous) => [
+      ...previous,
+      newLineItem,
+    ]);
+
+    // Reset item fields
     setSelectedCustomer(null);
     setItem("");
     setItemSize("");
@@ -123,11 +561,29 @@ export default function BillingPage() {
     setRate("");
   };
 
+  // ============================================================
+  // RESET FORM
+  // ============================================================
+
   const resetForm = () => {
     setSelectedCustomer(null);
     setSelectedBeopari(null);
+
+    setCustomerBalance({
+      loading: false,
+      balance: 0,
+      error: false,
+    });
+
+    setBeopariBalance({
+      loading: false,
+      balance: 0,
+      error: false,
+    });
+
     setCopyNo("");
     setGaariNo("");
+
     setItem("");
     setCommissionPct(8);
     setJama(0);
@@ -135,592 +591,1713 @@ export default function BillingPage() {
     setBags("");
     setWeight("");
     setRate("");
+
     setFreight("");
     setLabor("");
     setOtherCharges("");
+
     setNote("");
+
     setLineItems([]);
-    setBillNo(prev => (parseInt(prev) ? parseInt(prev) + 1 : 1001).toString());
+
+    setBillNo((previous) => {
+      const number =
+        parseInt(previous, 10);
+
+      return Number.isFinite(number)
+        ? String(number + 1)
+        : "1001";
+    });
+
+    setDate(getTodayDate());
   };
 
+  // ============================================================
+  // SAVE BILL
+  // ============================================================
+
   const handleSave = async () => {
-    if (!selectedBeopari || lineItems.length === 0) {
-      alert("Please select a beopari and add at least one item.");
+    if (!selectedBeopari) {
+      alert(
+        "Please select a Beopari."
+      );
+
+      return;
+    }
+
+    if (lineItems.length === 0) {
+      alert(
+        "Please add at least one item."
+      );
+
+      return;
+    }
+
+    // Validate customer for every line
+    const invalidLine =
+      lineItems.find(
+        (line) =>
+          !getAccountId(line.customer)
+      );
+
+    if (invalidLine) {
+      alert(
+        "Every item must have a customer."
+      );
+
       return;
     }
 
     setIsSaving(true);
 
+    // ==========================================================
+    // CUSTOMER TOTALS
+    // ==========================================================
+
+    const customerTotals = new Map<
+      string,
+      {
+        customer: Account;
+        amount: number;
+        commission: number;
+        items: LineItem[];
+      }
+    >();
+
+    lineItems.forEach((line) => {
+      if (!line.customer) return;
+
+      const customerId =
+        getAccountId(line.customer);
+
+      if (!customerId) return;
+
+      if (
+        !customerTotals.has(
+          customerId
+        )
+      ) {
+        customerTotals.set(
+          customerId,
+          {
+            customer: line.customer,
+            amount: 0,
+            commission: 0,
+            items: [],
+          }
+        );
+      }
+
+      const record =
+        customerTotals.get(
+          customerId
+        )!;
+
+      const commission =
+        line.amount *
+        ((Number(
+          line.commissionPct
+        ) || 0) /
+          100);
+
+      record.amount += line.amount;
+
+      record.commission +=
+        commission;
+
+      record.items.push(line);
+    });
+
+    // ==========================================================
+    // PAYLOAD
+    // ==========================================================
+
     const invoicePayload = {
       date,
+
       billNo,
+
       copyNo,
+
       vehicleNo: gaariNo,
-      beopari: selectedBeopari,
-      lineItems,
-      deductions: {
-        freight: Number(freight) || 0,
-        labor: Number(labor) || 0,
-        otherCharges: Number(otherCharges) || 0
+
+      beopari: {
+        ...selectedBeopari,
+
+        customerId:
+          getAccountId(
+            selectedBeopari
+          ),
       },
+
+      lineItems: lineItems.map(
+        (line) => ({
+          ...line,
+
+          customer: line.customer
+            ? {
+                ...line.customer,
+
+                customerId:
+                  getAccountId(
+                    line.customer
+                  ),
+              }
+            : null,
+        })
+      ),
+
+      deductions: {
+        freight:
+          Number(freight) || 0,
+
+        labor:
+          Number(labor) || 0,
+
+        otherCharges:
+          Number(otherCharges) || 0,
+      },
+
       totals: {
         totalWeight,
+
+        totalBags,
+
         totalAmount,
+
         totalCommission,
+
         totalDeductions,
-        netTotal
+
+        netTotal,
       },
-      note
+
+      note,
     };
 
     try {
-      const response = await fetch(`${API_URL}/api/bills`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(invoicePayload)
-      }).catch(() => null);
+      // ========================================================
+      // SAVE BILL
+      // ========================================================
 
-      let isSuccess = false;
-      if (response && response.ok) {
-        const data = await response.json();
-        isSuccess = data.success !== false;
+      const response =
+        await fetch(
+          `${API_URL}/api/bills`,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify(
+              invoicePayload
+            ),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (
+        !response.ok ||
+        data.success === false
+      ) {
+        throw new Error(
+          data.message ||
+            "Failed to save bill."
+        );
       }
 
-      if (!isSuccess) {
-        // Local fallback for offline/no-backend scenario
-        const customerTotals = new Map<string, { customer: Account | null; amount: number; commission: number; items: any[] }>();
-        lineItems.forEach(li => {
-          const key = li.customer ? li.customer.code : "UNKNOWN";
-          if (!customerTotals.has(key)) {
-            customerTotals.set(key, { customer: li.customer, amount: 0, commission: 0, items: [] });
+      // ========================================================
+      // SUCCESS
+      // ========================================================
+
+      console.log(
+        "Bill saved successfully:",
+        data
+      );
+
+      // Refresh selected account balances
+      const customerIds =
+        Array.from(
+          customerTotals.keys()
+        );
+
+      await Promise.all(
+        customerIds.map(
+          async (customerId) => {
+            try {
+              await fetchAccountBalance(
+                customerId,
+                setCustomerBalance
+              );
+            } catch (error) {
+              console.error(
+                "Customer balance refresh error:",
+                error
+              );
+            }
           }
-          customerTotals.get(key)!.amount += li.amount;
-          customerTotals.get(key)!.commission += li.amount * ((Number(li.commissionPct) || 0) / 100);
-          customerTotals.get(key)!.items.push(li);
-        });
+        )
+      );
 
-        const newRecords = Array.from(customerTotals.values()).map((ct, idx) => ({
-          id: Date.now() + idx,
-          date,
-          customerCode: ct.customer?.code || "-",
-          customerNameUrdu: ct.customer?.nameUrdu || "نامعلوم (Unknown)",
-          customerNameEnglish: ct.customer?.nameEnglish || "Unknown",
-          transactionType: "receipt",
-          amount: ct.amount,
-          commission: ct.commission,
-          netAmount: ct.amount + ct.commission,
-          items: ct.items,
-          description: `بل نمبر: ${billNo}, اشیاء کی خریداری${note ? ` - ${note}` : ""}`
-        }));
+      const beopariId =
+        getAccountId(
+          selectedBeopari
+        );
 
-        const beopariRecord = {
-          id: Date.now() + 1000,
-          date,
-          customerCode: selectedBeopari.code || "-",
-          customerNameUrdu: selectedBeopari.nameUrdu || "-",
-          customerNameEnglish: selectedBeopari.nameEnglish || "-",
-          transactionType: "payment",
-          amount: netTotal,
-          description: `بل نمبر: ${billNo}, خالص بل بیوپاری${note ? ` - ${note}` : ""}`
-        };
-
-        const existingStr = localStorage.getItem("katcha_chitha_records");
-        let existing = [];
-        if (existingStr) {
-          try {
-            existing = JSON.parse(existingStr);
-          } catch (e) {}
-        }
-        localStorage.setItem("katcha_chitha_records", JSON.stringify([...newRecords, beopariRecord, ...existing]));
+      if (beopariId) {
+        await fetchAccountBalance(
+          beopariId,
+          setBeopariBalance
+        );
       }
 
       setShowToast(true);
-    } catch (e) {
-      console.error(e);
-      alert("Error saving invoice.");
+    } catch (error: any) {
+      console.error(
+        "SAVE BILL ERROR:",
+        error
+      );
+
+      alert(
+        error?.message ||
+          "Error saving invoice."
+      );
     } finally {
       setIsSaving(false);
     }
   };
 
+  // ============================================================
+  // PRINT
+  // ============================================================
+
   const handlePrint = () => {
     window.print();
   };
 
+  // ============================================================
+  // FULLSCREEN
+  // ============================================================
+
+  const handleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (error) {
+      console.error(
+        "Fullscreen error:",
+        error
+      );
+    }
+  };
+
+  // ============================================================
+  // RENDER
+  // ============================================================
+
   return (
     <>
-    {/* PRINT TEMPLATE */}
-    <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-8 text-black font-urdu" dir="rtl">
-      <div className="border-2 border-black p-6 rounded-lg max-w-4xl mx-auto mt-10">
-        <div className="text-center mb-6 border-b-2 border-black pb-4">
-          <h1 className="text-4xl font-bold font-urdu mb-2">Ledger System</h1>
-          <p className="text-sm font-bold">Commission Agent System</p>
-          <h2 className="text-2xl font-bold mt-4">سیلز انوائس (بل)</h2>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4 mb-6 font-bold text-lg">
-          <div>
-            <p className="mb-2"><strong>خریدار: </strong> {lineItems[0]?.customer ? `${lineItems[0].customer.code} - ${lineItems[0].customer.nameUrdu}` : "__________________"}</p>
-            <p className="mb-2"><strong>تاریخ: </strong> <span suppressHydrationWarning>{date}</span></p>
-          </div>
-          <div>
-            <p className="mb-2"><strong>بل نمبر: </strong> {billNo}</p>
-            <p className="mb-2"><strong>بیوپاری: </strong> {selectedBeopari ? `${selectedBeopari.code} - ${selectedBeopari.nameUrdu}` : "__________________"}</p>
-          </div>
-        </div>
+      {/* ======================================================
+          PRINT TEMPLATE
+      ====================================================== */}
 
-        <table className="w-full border-collapse border border-black mb-8 text-lg font-bold">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="border border-black p-2 text-right">تفصیل اشیاء</th>
-              <th className="border border-black p-2 text-center">پیکنگ</th>
-              <th className="border border-black p-2 text-center">وزن</th>
-              <th className="border border-black p-2 text-center">ریٹ</th>
-              <th className="border border-black p-2 text-center">رقم</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lineItems.map((li, i) => (
-              <tr key={i}>
-                <td className="border border-black p-2 text-right">{li.item}</td>
-                <td className="border border-black p-2 text-center">{li.bags}</td>
-                <td className="border border-black p-2 text-center">{li.weight}</td>
-                <td className="border border-black p-2 text-center">{li.rate}</td>
-                <td className="border border-black p-2 text-center">{li.amount.toLocaleString()}</td>
+      <div
+        className="hidden print:block fixed inset-0 bg-white z-[9999] p-8 text-black font-urdu"
+        dir="rtl"
+      >
+        <div className="border-2 border-black p-6 rounded-lg max-w-4xl mx-auto mt-10">
+          <div className="text-center mb-6 border-b-2 border-black pb-4">
+            <h1 className="text-4xl font-bold font-urdu mb-2">
+              Ledger System
+            </h1>
+
+            <p className="text-sm font-bold">
+              Commission Agent System
+            </p>
+
+            <h2 className="text-2xl font-bold mt-4">
+              بیوپاری سادہ بل
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-6 font-bold text-lg">
+            <div>
+              <p className="mb-2">
+                <strong>
+                  خریدار:
+                </strong>{" "}
+                {lineItems[0]?.customer
+                  ? `${lineItems[0].customer.code} - ${lineItems[0].customer.nameUrdu}`
+                  : "__________________"}
+              </p>
+
+              <p className="mb-2">
+                <strong>
+                  تاریخ:
+                </strong>{" "}
+                {date}
+              </p>
+            </div>
+
+            <div>
+              <p className="mb-2">
+                <strong>
+                  بل نمبر:
+                </strong>{" "}
+                {billNo}
+              </p>
+
+              <p className="mb-2">
+                <strong>
+                  بیوپاری:
+                </strong>{" "}
+                {selectedBeopari
+                  ? `${selectedBeopari.code} - ${selectedBeopari.nameUrdu}`
+                  : "__________________"}
+              </p>
+            </div>
+          </div>
+
+          <table className="w-full border-collapse border border-black mb-8 text-lg font-bold">
+            <thead>
+              <tr className="bg-gray-200">
+                <th className="border border-black p-2 text-right">
+                  تفصیل اشیاء
+                </th>
+
+                <th className="border border-black p-2 text-center">
+                  پیکنگ
+                </th>
+
+                <th className="border border-black p-2 text-center">
+                  وزن
+                </th>
+
+                <th className="border border-black p-2 text-center">
+                  ریٹ
+                </th>
+
+                <th className="border border-black p-2 text-center">
+                  رقم
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
 
-        <div className="flex justify-between items-start text-lg font-bold">
-          <div className="w-1/3">
-            <h3 className="font-bold border-b border-black mb-2 pb-1 text-xl">تفصیل خرچہ</h3>
-            <div className="flex justify-between text-base mb-1"><span>کرایہ:</span> <span>{freight}</span></div>
-            <div className="flex justify-between text-base mb-1"><span>مزدوری:</span> <span>{labor}</span></div>
-            <div className="flex justify-between text-base mb-1"><span>دیگر:</span> <span>{otherCharges}</span></div>
-            <div className="flex justify-between text-lg font-bold border-t border-black mt-2 pt-2"><span>کل خرچہ:</span> <span>{totalDeductions}</span></div>
-          </div>
-          
-          <div className="w-1/3 border-2 border-black p-4 rounded-lg bg-gray-50">
-            <div className="flex justify-between mb-2"><span>کل رقم:</span> <span>{totalAmount.toLocaleString()}</span></div>
-            <div className="flex justify-between mb-2"><span>کمیشن ({commissionPct}%):</span> <span>{totalCommission.toLocaleString()}</span></div>
-            <div className="flex justify-between mb-2"><span>خرچہ:</span> <span>- {totalDeductions.toLocaleString()}</span></div>
-            <div className="flex justify-between font-black text-2xl border-t border-black pt-3 mt-3">
-              <span>خالص بل:</span> <span>{netTotal.toLocaleString()}</span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="mt-20 flex justify-between text-xl font-bold">
-          <div className="border-t-2 border-black pt-2 px-10 text-center">دستخط خریدار</div>
-          <div className="border-t-2 border-black pt-2 px-10 text-center">دستخط آڑھتی</div>
-        </div>
-      </div>
-    </div>
+            <tbody>
+              {lineItems.map(
+                (li, index) => (
+                  <tr key={index}>
+                    <td className="border border-black p-2 text-right">
+                      {li.item}
+                    </td>
 
-    {/* NORMAL APP VIEW */}
-    <div className={cn(
-      "print:hidden flex flex-col bg-[#F8FAFC] shadow-sm transition-all duration-300 overflow-hidden",
-      isFullScreenUI 
-        ? "fixed inset-0 z-[100] h-[100dvh] w-screen p-2 sm:p-4 rounded-none" 
-        : "h-[calc(100vh-8.5rem)] rounded-xl border border-[#E2E8F0]"
-    )}>
-      
-      {/* Main Content Split - NO TITLE BAR ANYMORE! */}
-      <div className="flex flex-col-reverse lg:flex-row flex-1 p-2 sm:p-3 gap-3 overflow-y-auto lg:overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        
-        {/* Left Pane - Line Items & Totals */}
-        <div className="w-full lg:flex-1 flex flex-col gap-3 min-w-0 lg:h-full">
-          {/* Line Items Table */}
-          <div className="flex-1 bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden flex flex-col min-h-[300px]">
-            <div className="bg-[#064789] text-white p-2 font-bold text-center text-xs tracking-wide" dir="rtl">
-              بیوپاری سادہ بل بغیر آمد
-            </div>
-            <div className="overflow-x-auto overflow-y-auto flex-1 pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              <table className="w-full text-xs text-right min-w-[600px]" dir="rtl">
-                <thead className="bg-[#F8FAFC] sticky top-0 border-b border-[#E2E8F0]">
-                  <tr>
-                    <th className="p-2 border-l border-[#E2E8F0] text-center text-[11px] font-bold text-[#334155] leading-tight">
-                      Item<br/><span className="font-urdu font-normal text-[10px] opacity-80">اشیاء قسم</span>
-                    </th>
-                    <th className="p-2 border-l border-[#E2E8F0] text-center text-[11px] font-bold text-[#334155] leading-tight">
-                      Customer<br/><span className="font-urdu font-normal text-[10px] opacity-80">نام خریدار</span>
-                    </th>
-                    <th className="p-2 border-l border-[#E2E8F0] text-center text-[11px] font-bold text-[#334155] leading-tight">
-                      Weight Kg<br/><span className="font-urdu font-normal text-[10px] opacity-80">وزن کلو</span>
-                    </th>
-                    <th className="p-2 border-l border-[#E2E8F0] text-center text-[11px] font-bold text-[#334155] leading-tight">
-                      Comm%<br/><span className="font-urdu font-normal text-[10px] opacity-80">کمیشن</span>
-                    </th>
-                    <th className="p-2 border-l border-[#E2E8F0] text-center text-[11px] font-bold text-[#334155] leading-tight">
-                      Rate/Kg<br/><span className="font-urdu font-normal text-[10px] opacity-80">ریٹ فی کلو</span>
-                    </th>
-                    <th className="p-2 text-center text-[11px] font-bold text-[#334155] leading-tight">
-                      Total<br/><span className="font-urdu font-normal text-[10px] opacity-80">کل رقم</span>
-                    </th>
+                    <td className="border border-black p-2 text-center">
+                      {li.bags}
+                    </td>
+
+                    <td className="border border-black p-2 text-center">
+                      {li.weight}
+                    </td>
+
+                    <td className="border border-black p-2 text-center">
+                      {li.rate}
+                    </td>
+
+                    <td className="border border-black p-2 text-center">
+                      {formatMoney(
+                        li.amount
+                      )}
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E2E8F0] bg-white">
-                  {lineItems.map((li, idx) => (
-                    <tr key={li.id} className="hover:bg-cyan-50/50 transition-colors">
-                      <td className="p-2 border-l border-[#E2E8F0] font-urdu text-center text-[#334155]">{li.item}</td>
-                      <td className="p-2 border-l border-[#E2E8F0] text-center font-urdu text-[#334155]">{li.customer ? `${li.customer.code} - ${li.customer.nameUrdu}` : "-"}</td>
-                      <td className="p-2 border-l border-[#E2E8F0] font-bold text-center text-[#0F172A]">{li.weight}</td>
-                      <td className="p-2 border-l border-[#E2E8F0] text-center font-urdu text-[#334155]">{li.commissionPct}%</td>
-                      <td className="p-2 border-l border-[#E2E8F0] text-[#06b6d4] font-bold text-center">{li.rate}</td>
-                      <td className="p-2 font-bold text-[#0F172A] text-center">{li.amount.toLocaleString()}</td>
-                    </tr>
-                  ))}
-                  {lineItems.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="p-8 text-center text-slate-400 font-urdu text-sm">کوئی ریکارڈ نہیں</td>
-                    </tr>
+                )
+              )}
+            </tbody>
+          </table>
+
+          <div className="flex justify-between items-start text-lg font-bold">
+            <div className="w-1/3">
+              <h3 className="font-bold border-b border-black mb-2 pb-1 text-xl">
+                تفصیل خرچہ
+              </h3>
+
+              <div className="flex justify-between text-base mb-1">
+                <span>
+                  کرایہ:
+                </span>
+
+                <span>
+                  {formatMoney(
+                    freight
                   )}
-                </tbody>
-              </table>
+                </span>
+              </div>
+
+              <div className="flex justify-between text-base mb-1">
+                <span>
+                  مزدوری:
+                </span>
+
+                <span>
+                  {formatMoney(
+                    labor
+                  )}
+                </span>
+              </div>
+
+              <div className="flex justify-between text-base mb-1">
+                <span>
+                  دیگر:
+                </span>
+
+                <span>
+                  {formatMoney(
+                    otherCharges
+                  )}
+                </span>
+              </div>
+
+              <div className="flex justify-between text-lg font-bold border-t border-black mt-2 pt-2">
+                <span>
+                  کل خرچہ:
+                </span>
+
+                <span>
+                  {formatMoney(
+                    totalDeductions
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <div className="w-1/3 border-2 border-black p-4 rounded-lg bg-gray-50">
+              <div className="flex justify-between mb-2">
+                <span>
+                  کل رقم:
+                </span>
+
+                <span>
+                  {formatMoney(
+                    totalAmount
+                  )}
+                </span>
+              </div>
+
+              <div className="flex justify-between mb-2">
+                <span>
+                  کمیشن:
+                </span>
+
+                <span>
+                  {formatMoney(
+                    totalCommission
+                  )}
+                </span>
+              </div>
+
+              <div className="flex justify-between mb-2">
+                <span>
+                  خرچہ:
+                </span>
+
+                <span>
+                  -{" "}
+                  {formatMoney(
+                    totalDeductions
+                  )}
+                </span>
+              </div>
+
+              <div className="flex justify-between font-black text-2xl border-t border-black pt-3 mt-3">
+                <span>
+                  خالص بل:
+                </span>
+
+                <span>
+                  {formatMoney(
+                    netTotal
+                  )}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Totals Section */}
-          <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm p-3 shrink-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="space-y-2" dir="rtl">
-                <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
-                  <span className="text-[#334155] font-medium">کل وزن کلو (Total Weight):</span>
-                  <span className="font-bold text-[#0F172A]">{totalWeight}</span>
-                </div>
-                <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
-                  <span className="text-[#334155] font-medium">اصل اوسط (Average):</span>
-                  <span className="font-bold text-red-500">{averageWeight}</span>
-                </div>
-                <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
-                  <span className="text-[#334155] font-medium">کل رقم (Gross Total):</span>
-                  <span className="font-bold text-[#0F172A]">{totalAmount.toLocaleString()}</span>
-                </div>
-              </div>
-              
-              <div className="space-y-2" dir="rtl">
-                <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
-                  <span className="text-[#334155] font-medium">کل کمیشن ({commissionPct}%):</span>
-                  <span className="font-bold text-[#334155]">{totalCommission.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
-                  <span className="text-[#334155] font-medium">مزید خرچہ (Deductions):</span>
-                  <span className="font-bold text-red-500">{totalDeductions.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between bg-[#06b6d4]/10 p-2 rounded-lg mt-2 border border-[#06b6d4]/20">
-                  <span className="font-bold text-[#0F172A]">خالص بل رقم (Net Total):</span>
-                  <span className="font-black text-[#06b6d4] text-sm">RS {netTotal.toLocaleString()}</span>
-                </div>
-              </div>
+          {note && (
+            <div className="mt-6 border border-black p-3">
+              <strong>
+                نوٹ:
+              </strong>{" "}
+              {note}
             </div>
-            
-            {/* Bill Note */}
-            <div className="mt-3 pt-3 border-t border-[#E2E8F0] flex items-center gap-2" dir="rtl">
-              <label className="font-bold text-[#0F172A] text-xs shrink-0 whitespace-nowrap">بل نوٹ (Note):</label>
-              <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="کوئی نوٹ لکھیں..." className="flex-1 border border-[#E2E8F0] p-1.5 bg-[#F8FAFC] text-xs font-urdu focus:outline-none focus:border-[#06b6d4] rounded-md transition-colors" />
+          )}
+
+          <div className="mt-20 flex justify-between text-xl font-bold">
+            <div className="border-t-2 border-black pt-2 px-10 text-center">
+              دستخط خریدار
             </div>
 
-            {/* Action Buttons - Moved to Left Pane */}
-            <div className="flex gap-3 pt-4 shrink-0 items-center">
-              <button disabled={isSaving} onClick={handleSave} className="flex-1 bg-[#06b6d4] text-white py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-cyan-600 transition-colors shadow-sm disabled:opacity-50">
-                <Save className="h-4 w-4" /> {isSaving ? "Saving..." : "Save (محفوظ)"}
-              </button>
-              <button onClick={handlePrint} className="flex-1 bg-[#064789] text-white py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#053a70] transition-colors shadow-sm">
-                <Printer className="h-4 w-4" /> Print (پرنٹ)
-              </button>
-              <button onClick={() => {
-                if (!document.fullscreenElement) {
-                  document.documentElement.requestFullscreen().catch(e => console.error(e));
-                } else {
-                  document.exitFullscreen().catch(e => console.error(e));
-                }
-              }} className="w-10 h-10 shrink-0 bg-slate-600 text-white rounded-full flex items-center justify-center hover:bg-slate-700 transition-colors shadow-sm" title="Full Screen">
-                <Maximize className="h-4 w-4" />
-              </button>
+            <div className="border-t-2 border-black pt-2 px-10 text-center">
+              دستخط آڑھتی
             </div>
           </div>
-        </div>
-
-        {/* Right Pane - EXACT MATCH TO SCREENSHOT 1 */}
-        <div className="w-full lg:w-[45%] xl:w-[40%] flex flex-col gap-1.5 shrink-0 lg:h-full overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-1">
-          
-          <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm flex flex-col p-2 gap-1.5 text-xs" dir="rtl">
-            
-            {/* Row 1: Date */}
-            <div className="flex justify-between items-center bg-[#06b6d4]/10 p-1 rounded border border-[#06b6d4]/20 gap-2">
-              <div className="flex items-center gap-2 w-1/2">
-                <label className="font-bold text-[#0F172A] whitespace-nowrap">Date (تاریخ)</label>
-                <input type="date" suppressHydrationWarning value={date} onChange={e => setDate(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-0.5 text-center bg-white focus:border-[#06b6d4] outline-none flex-1 min-w-0 w-full" />
-              </div>
-              <div className="w-1/2 flex items-center gap-2">
-                <label className="font-bold text-[#0F172A] text-left whitespace-nowrap">Bill No (بل نمبر)</label>
-                <input type="text" value={billNo} onChange={e => setBillNo(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-0.5 text-center bg-white outline-none flex-1 min-w-0 w-full" />
-              </div>
-            </div>
-
-            {/* Row 2: Beopari */}
-            <div className="flex items-center gap-2 bg-cyan-100/50 p-1 rounded border border-cyan-200">
-              <label className="font-bold text-[#0F172A] whitespace-nowrap min-w-[90px]">Beopari (بیوپاری)</label>
-              <div className="flex relative flex-1">
-                <div 
-                  className="border border-[#E2E8F0] rounded-sm p-0.5 min-h-[26px] w-full bg-white font-urdu font-bold cursor-pointer text-[#0F172A] flex items-center whitespace-normal break-words pl-8"
-                  onClick={() => setIsBeopariSearchOpen(true)}
-                  dir="rtl"
-                >
-                  {selectedBeopari ? `${selectedBeopari.code} - ${selectedBeopari.nameUrdu}` : <span className="text-gray-400 font-normal text-xs">بیوپاری منتخب کریں</span>}
-                </div>
-                <button onClick={() => setIsBeopariSearchOpen(true)} className="absolute left-0 top-0 bottom-0 bg-slate-100 rounded-l-sm px-2 border border-[#E2E8F0] hover:bg-slate-200">
-                  <Search className="w-3 h-3 text-[#334155]" />
-                </button>
-              </div>
-            </div>
-
-            {/* Row 3: Copy No / Gaari No */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex flex-col gap-0.5">
-                <label className="font-bold text-[#0F172A] whitespace-nowrap">Copy No (کاپی)</label>
-                <input type="text" value={copyNo} onChange={e => setCopyNo(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full" />
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <label className="font-bold text-[#0F172A] whitespace-nowrap">Vehicle (گاڑی نمبر)</label>
-                <input type="text" value={gaariNo} onChange={e => setGaariNo(e.target.value)} className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full" />
-              </div>
-            </div>
-
-            {/* Row 4: Beopari Balance */}
-            <div className="flex items-center gap-2">
-              <label className="font-bold text-[#0F172A] whitespace-nowrap min-w-[90px]">Beopari Bal (بیوپاری بیلنس)</label>
-              <input type="text" value={selectedBeopari ? "50,000" : ""} readOnly className="border border-[#E2E8F0] rounded-sm p-0.5 bg-cyan-50 text-left font-bold text-cyan-600 outline-none flex-1" />
-            </div>
-
-            <hr className="border-[#E2E8F0] my-0" />
-
-            {/* Row 5: Kharidar */}
-            <div className="flex items-center gap-2 bg-cyan-100/50 p-1 rounded border border-cyan-200">
-              <label className="font-bold text-[#0F172A] whitespace-nowrap min-w-[90px]">Customer (خریدار)</label>
-              <div className="flex relative flex-1">
-                <div 
-                  className="border border-[#E2E8F0] rounded-sm p-0.5 min-h-[26px] w-full bg-white font-urdu font-bold cursor-pointer text-[#0F172A] flex items-center whitespace-normal break-words pl-8"
-                  onClick={() => setIsSearchOpen(true)}
-                  dir="rtl"
-                >
-                  {selectedCustomer ? `${selectedCustomer.code} - ${selectedCustomer.nameUrdu}` : <span className="text-gray-400 font-normal text-xs">خریدار منتخب کریں</span>}
-                </div>
-                <button onClick={() => setIsSearchOpen(true)} className="absolute left-0 top-0 bottom-0 bg-slate-100 rounded-l-sm px-2 border border-[#E2E8F0] hover:bg-slate-200">
-                  <Search className="w-3 h-3 text-[#334155]" />
-                </button>
-              </div>
-            </div>
-
-            {/* Row 6: Kharidar Balance */}
-            <div className="flex items-center gap-2">
-              <label className="font-bold text-[#0F172A] whitespace-nowrap min-w-[90px]">Customer Bal (خریدار بیلنس)</label>
-              <input type="text" value={selectedCustomer ? "150,000" : ""} readOnly className="border border-[#E2E8F0] rounded-sm p-0.5 bg-cyan-50 text-left font-bold text-cyan-600 outline-none flex-1" />
-            </div>
-
-            <hr className="border-[#E2E8F0] my-0" />
-
-            {/* Row 7: Item Entry pt1 */}
-            <div className="grid grid-cols-12 gap-2 bg-cyan-100/30 p-1.5 rounded border border-cyan-200">
-              <div className="col-span-8 flex flex-col gap-0.5">
-                <label className="font-bold text-[#0F172A] whitespace-nowrap">Item (اشیاء)</label>
-                <div className="flex relative w-full">
-                  <div 
-                    className="border border-[#E2E8F0] rounded-sm p-0.5 min-h-[26px] w-full bg-white font-urdu font-bold cursor-pointer text-[#0F172A] flex items-center whitespace-normal break-words pl-8"
-                    onClick={() => setIsItemSearchOpen(true)}
-                    dir="rtl"
-                  >
-                    {item ? item : <span className="text-gray-400 font-normal text-xs">Item Name</span>}
-                  </div>
-                  <button onClick={() => setIsItemSearchOpen(true)} className="absolute left-0 top-0 bottom-0 bg-slate-100 rounded-l-sm px-2 border border-[#E2E8F0] hover:bg-slate-200">
-                    <Search className="w-3 h-3 text-[#334155]" />
-                  </button>
-                </div>
-              </div>
-              <div className="col-span-4 flex flex-col gap-0.5">
-                <label className="font-bold text-[#0F172A] whitespace-nowrap">Comm (کمیشن)</label>
-                <input type="number" value={commissionPct} readOnly className="border border-[#E2E8F0] rounded-sm p-0.5 bg-gray-100 text-gray-500 outline-none w-full text-center min-h-[26px] cursor-not-allowed" />
-              </div>
-            </div>
-
-            {/* Row 8: Item Entry pt2 */}
-            <div className="grid grid-cols-12 gap-2">
-              <div className="col-span-6 flex flex-col gap-0.5">
-                <label className="font-bold text-[#0F172A] whitespace-nowrap">Item Size (اشیاء سائز کلو)</label>
-                <div className="flex relative w-full">
-                  <div 
-                    className="border border-[#E2E8F0] rounded-sm p-0.5 min-h-[26px] w-full bg-white font-bold cursor-pointer text-[#0F172A] flex items-center justify-center whitespace-nowrap"
-                    onClick={() => setIsItemSizeSearchOpen(true)}
-                  >
-                    {itemSize ? itemSize : <span className="text-gray-400 font-normal text-xs">Item Size</span>}
-                  </div>
-                  <button onClick={() => setIsItemSizeSearchOpen(true)} className="absolute left-0 top-0 bottom-0 bg-slate-100 rounded-l-sm px-2 border border-[#E2E8F0] hover:bg-slate-200">
-                    <Search className="w-3 h-3 text-[#334155]" />
-                  </button>
-                </div>
-              </div>
-              <div className="col-span-6 flex flex-col gap-0.5">
-                <label className="font-bold text-[#0F172A] whitespace-nowrap">Packing (پیکنگ)</label>
-                <input type="number" value={bags} onChange={e => setBags(e.target.value === "" ? "" : Number(e.target.value))} placeholder="-" className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full text-center min-h-[26px] placeholder:text-xl placeholder:font-bold placeholder:text-gray-400 placeholder:-translate-y-0.5" />
-              </div>
-            </div>
-
-            {/* Row 9: Item Entry pt3 (Weight, Rate, Total) */}
-            <div className="grid grid-cols-12 gap-2 bg-[#06b6d4]/10 p-1.5 rounded border border-[#06b6d4]/20 items-end">
-              <div className="col-span-4 flex flex-col gap-0.5">
-                <label className="font-bold text-[#0F172A] text-center whitespace-nowrap">Weight Kg (وزن کلو)</label>
-                <input type="number" value={weight} onChange={e => setWeight(Number(e.target.value))} className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full text-center font-bold min-h-[26px]" />
-              </div>
-              <div className="col-span-4 flex flex-col gap-0.5">
-                <label className="font-bold text-[#0F172A] text-center whitespace-nowrap">Rate/Kg (ریٹ)</label>
-                <input type="number" value={rate} onChange={e => setRate(Number(e.target.value))} className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full text-center font-bold text-red-500 min-h-[26px]" />
-              </div>
-              <div className="col-span-4 flex flex-col gap-0.5">
-                <label className="font-bold text-[#0F172A] text-center whitespace-nowrap">Total (ٹوٹل)</label>
-                <div className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white text-center font-bold text-black min-h-[26px] flex items-center justify-center">
-                   {((Number(weight)||0) * (Number(rate)||0)).toLocaleString()}
-                </div>
-              </div>
-            </div>
-
-            <button onClick={handleAddLineItem} className="bg-[#06b6d4] text-white p-1.5 rounded-md hover:bg-cyan-600 font-bold flex items-center justify-center w-full transition-colors h-[30px] shadow-sm mt-0.5" title="شامل کریں">
-              <Plus className="w-4 h-4 mr-1" /> اشیاء شامل کریں
-            </button>
-          </div>
-
-
-          {/* Deductions Trigger Button */}
-          <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm flex flex-col overflow-hidden text-xs shrink-0" dir="rtl">
-            <button 
-              onClick={() => setIsDeductionsOpen(true)}
-              className="bg-[#064789] text-white p-2.5 font-bold flex items-center justify-between hover:bg-[#053a70] transition-colors"
-            >
-              <span className="text-[13px]">مزید بل خرچہ (Deductions)</span>
-              <div className="bg-[#06b6d4] rounded-full p-1 shadow-sm">
-                 <Plus className="h-4 w-4 text-white" />
-              </div>
-            </button>
-            
-            {(Number(freight) > 0 || Number(labor) > 0 || Number(otherCharges) > 0) && (
-              <div className="p-3 bg-slate-50 flex flex-col gap-2 border-t border-[#E2E8F0]">
-                {Number(freight) > 0 && (
-                  <div className="flex justify-between items-center text-slate-700">
-                    <span className="font-medium">Freight (کرایہ)</span>
-                    <span className="font-bold">{freight} RS</span>
-                  </div>
-                )}
-                {Number(labor) > 0 && (
-                  <div className="flex justify-between items-center text-slate-700">
-                    <span className="font-medium">Labor (مزدوری)</span>
-                    <span className="font-bold text-red-500">{labor} RS</span>
-                  </div>
-                )}
-                {Number(otherCharges) > 0 && (
-                  <div className="flex justify-between items-center text-slate-700">
-                    <span className="font-medium">Other (متفرق)</span>
-                    <span className="font-bold">{otherCharges} RS</span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center border-t border-[#E2E8F0] pt-2 mt-1">
-                  <span className="font-bold text-[#0F172A]">Total (کل خرچہ)</span>
-                  <span className="font-black text-[#0F172A]">{totalDeductions} RS</span>
-                </div>
-              </div>
-            )}
-          </div>
-
         </div>
       </div>
 
-      {/* Save Success Modal */}
-      {showToast && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 flex flex-col items-center text-center animate-in zoom-in-95">
-            <div className="w-24 h-24 bg-cyan-50 rounded-full flex items-center justify-center mb-6">
-              <Save className="w-12 h-12 text-[#06b6d4]" />
+      {/* ======================================================
+          NORMAL APP VIEW
+      ====================================================== */}
+
+      <div
+        className={cn(
+          "print:hidden flex flex-col bg-[#F8FAFC] shadow-sm transition-all duration-300 overflow-hidden",
+
+          isFullScreenUI
+            ? "fixed inset-0 z-[100] h-[100dvh] w-screen p-2 sm:p-4 rounded-none"
+            : "h-[calc(100vh-8.5rem)] rounded-xl border border-[#E2E8F0]"
+        )}
+      >
+        <div className="flex flex-col-reverse lg:flex-row flex-1 p-2 sm:p-3 gap-3 overflow-y-auto lg:overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {/* ==================================================
+              LEFT PANE
+          ================================================== */}
+
+          <div className="w-full lg:flex-1 flex flex-col gap-3 min-w-0 lg:h-full">
+            {/* LINE ITEMS TABLE */}
+
+            <div className="flex-1 bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden flex flex-col min-h-[300px]">
+              <div
+                className="bg-[#064789] text-white p-2 font-bold text-center text-xs tracking-wide"
+                dir="rtl"
+              >
+                بیوپاری سادہ بل بغیر آمد
+              </div>
+
+              <div className="overflow-x-auto overflow-y-auto flex-1 pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                <table
+                  className="w-full text-xs text-right min-w-[600px]"
+                  dir="rtl"
+                >
+                  <thead className="bg-[#F8FAFC] sticky top-0 border-b border-[#E2E8F0]">
+                    <tr>
+                      <th className="p-2 border-l border-[#E2E8F0] text-center text-[11px] font-bold text-[#334155]">
+                        Item
+                        <br />
+                        <span className="font-urdu font-normal text-[10px] opacity-80">
+                          اشیاء قسم
+                        </span>
+                      </th>
+
+                      <th className="p-2 border-l border-[#E2E8F0] text-center text-[11px] font-bold text-[#334155]">
+                        Customer
+                        <br />
+                        <span className="font-urdu font-normal text-[10px] opacity-80">
+                          نام خریدار
+                        </span>
+                      </th>
+
+                      <th className="p-2 border-l border-[#E2E8F0] text-center text-[11px] font-bold text-[#334155]">
+                        Weight Kg
+                        <br />
+                        <span className="font-urdu font-normal text-[10px] opacity-80">
+                          وزن کلو
+                        </span>
+                      </th>
+
+                      <th className="p-2 border-l border-[#E2E8F0] text-center text-[11px] font-bold text-[#334155]">
+                        Comm%
+                        <br />
+                        <span className="font-urdu font-normal text-[10px] opacity-80">
+                          کمیشن
+                        </span>
+                      </th>
+
+                      <th className="p-2 border-l border-[#E2E8F0] text-center text-[11px] font-bold text-[#334155]">
+                        Rate/Kg
+                        <br />
+                        <span className="font-urdu font-normal text-[10px] opacity-80">
+                          ریٹ فی کلو
+                        </span>
+                      </th>
+
+                      <th className="p-2 text-center text-[11px] font-bold text-[#334155]">
+                        Total
+                        <br />
+                        <span className="font-urdu font-normal text-[10px] opacity-80">
+                          کل رقم
+                        </span>
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                    {lineItems.map(
+                      (li) => (
+                        <tr
+                          key={li.id}
+                          className="hover:bg-cyan-50/50 transition-colors"
+                        >
+                          <td className="p-2 border-l border-[#E2E8F0] font-urdu text-center text-[#334155]">
+                            {li.item}
+                          </td>
+
+                          <td className="p-2 border-l border-[#E2E8F0] text-center font-urdu text-[#334155]">
+                            {li.customer
+                              ? `${li.customer.code} - ${li.customer.nameUrdu}`
+                              : "-"}
+                          </td>
+
+                          <td className="p-2 border-l border-[#E2E8F0] font-bold text-center text-[#0F172A]">
+                            {li.weight}
+                          </td>
+
+                          <td className="p-2 border-l border-[#E2E8F0] text-center text-[#334155]">
+                            {li.commissionPct}%
+                          </td>
+
+                          <td className="p-2 border-l border-[#E2E8F0] text-[#06b6d4] font-bold text-center">
+                            {formatMoney(
+                              li.rate
+                            )}
+                          </td>
+
+                          <td className="p-2 font-bold text-[#0F172A] text-center">
+                            {formatMoney(
+                              li.amount
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    )}
+
+                    {lineItems.length ===
+                      0 && (
+                      <tr>
+                        <td
+                          colSpan={6}
+                          className="p-8 text-center text-slate-400 font-urdu text-sm"
+                        >
+                          کوئی ریکارڈ نہیں
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <h2 className="text-2xl font-bold text-slate-800 mb-4">Invoice Saved Successfully!</h2>
-            <p className="text-3xl font-urdu text-slate-800 mb-8" dir="rtl">انوائس کامیابی سے محفوظ ہو گیا ہے۔</p>
-            <button 
-              onClick={() => {
-                setShowToast(false);
-                resetForm();
-              }} 
-              className="w-full bg-[#06b6d4] text-white py-3.5 rounded-xl font-bold text-lg hover:bg-cyan-600 transition-colors"
+
+            {/* TOTALS */}
+
+            <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm p-3 shrink-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div
+                  className="space-y-2"
+                  dir="rtl"
+                >
+                  <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
+                    <span className="text-[#334155] font-medium">
+                      کل وزن کلو:
+                    </span>
+
+                    <span className="font-bold text-[#0F172A]">
+                      {totalWeight}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
+                    <span className="text-[#334155] font-medium">
+                      کل پیکنگ:
+                    </span>
+
+                    <span className="font-bold text-[#0F172A]">
+                      {totalBags}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
+                    <span className="text-[#334155] font-medium">
+                      اصل اوسط:
+                    </span>
+
+                    <span className="font-bold text-red-500">
+                      {averageWeight}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
+                    <span className="text-[#334155] font-medium">
+                      کل رقم:
+                    </span>
+
+                    <span className="font-bold text-[#0F172A]">
+                      {formatMoney(
+                        totalAmount
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  className="space-y-2"
+                  dir="rtl"
+                >
+                  <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
+                    <span className="text-[#334155] font-medium">
+                      کل کمیشن:
+                    </span>
+
+                    <span className="font-bold text-[#334155]">
+                      {formatMoney(
+                        totalCommission
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
+                    <span className="text-[#334155] font-medium">
+                      مزید خرچہ:
+                    </span>
+
+                    <span className="font-bold text-red-500">
+                      {formatMoney(
+                        totalDeductions
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between bg-[#06b6d4]/10 p-2 rounded-lg mt-2 border border-[#06b6d4]/20">
+                    <span className="font-bold text-[#0F172A]">
+                      خالص بل رقم:
+                    </span>
+
+                    <span className="font-black text-[#06b6d4] text-sm">
+                      RS{" "}
+                      {formatMoney(
+                        netTotal
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* NOTE */}
+
+              <div
+                className="mt-3 pt-3 border-t border-[#E2E8F0] flex items-center gap-2"
+                dir="rtl"
+              >
+                <label className="font-bold text-[#0F172A] text-xs shrink-0 whitespace-nowrap">
+                  بل نوٹ:
+                </label>
+
+                <input
+                  type="text"
+                  value={note}
+                  onChange={(e) =>
+                    setNote(
+                      e.target.value
+                    )
+                  }
+                  placeholder="کوئی نوٹ لکھیں..."
+                  className="flex-1 border border-[#E2E8F0] p-1.5 bg-[#F8FAFC] text-xs font-urdu focus:outline-none focus:border-[#06b6d4] rounded-md"
+                />
+              </div>
+
+              {/* ACTION BUTTONS */}
+
+              <div className="flex gap-3 pt-4 shrink-0 items-center">
+                <button
+                  disabled={isSaving}
+                  onClick={handleSave}
+                  className="flex-1 bg-[#06b6d4] text-white py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-cyan-600 transition-colors shadow-sm disabled:opacity-50"
+                >
+                  <Save className="h-4 w-4" />
+
+                  {isSaving
+                    ? "Saving..."
+                    : "Save (محفوظ)"}
+                </button>
+
+                <button
+                  onClick={
+                    handlePrint
+                  }
+                  className="flex-1 bg-[#064789] text-white py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#053a70] transition-colors shadow-sm"
+                >
+                  <Printer className="h-4 w-4" />
+
+                  Print (پرنٹ)
+                </button>
+
+                <button
+                  onClick={
+                    handleFullscreen
+                  }
+                  className="w-10 h-10 shrink-0 bg-slate-600 text-white rounded-full flex items-center justify-center hover:bg-slate-700 transition-colors shadow-sm"
+                  title="Full Screen"
+                >
+                  <Maximize className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* ==================================================
+              RIGHT PANE
+          ================================================== */}
+
+        <div className="w-full lg:w-[45%] xl:w-[40%] flex flex-col gap-1.5 shrink-0 lg:h-full overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-1">
+            <div
+              className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm flex flex-col p-2 gap-1.5 text-xs"
+              dir="rtl"
             >
-              ٹھیک ہے / OK
-            </button>
-          </div>
-        </div>
-      )}
+              {/* DATE + BILL NO */}
 
-      <AccountSearchModal 
-        isOpen={isSearchOpen} 
-        onClose={() => setIsSearchOpen(false)} 
-        onSelect={(acc) => {
-          setSelectedCustomer(acc);
-        }}
-        typeFilter="گاہک"
-      />
-      <AccountSearchModal 
-        isOpen={isBeopariSearchOpen} 
-        onClose={() => setIsBeopariSearchOpen(false)} 
-        onSelect={(acc) => {
-          setSelectedBeopari(acc);
-        }}
-        typeFilter="بیوپاری"
-      />
-      <ItemSearchModal 
-        isOpen={isItemSearchOpen} 
-        onClose={() => setIsItemSearchOpen(false)} 
-        onSelect={(itm) => {
-          setItem(itm.nameUrdu);
-        }}
-      />
-      <ItemSizeSearchModal 
-        isOpen={isItemSizeSearchOpen} 
-        onClose={() => setIsItemSizeSearchOpen(false)} 
-        onSelect={(sz) => {
-          setItemSize(sz);
-        }}
-      />
+              <div className="flex justify-between items-center bg-[#06b6d4]/10 p-1 rounded border border-[#06b6d4]/20 gap-2">
+                <div className="flex items-center gap-2 w-1/2">
+                  <label className="font-bold text-[#0F172A] whitespace-nowrap">
+                    Date (تاریخ)
+                  </label>
 
-      {/* Deductions Modal */}
-      {isDeductionsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col" dir="rtl">
-            <div className="bg-[#1e293b] text-white p-3 font-bold flex items-center justify-between">
-              <span>مزید بل خرچہ (Deductions)</span>
-              <button onClick={() => setIsDeductionsOpen(false)} className="text-slate-300 hover:text-white">
-                 <X className="h-5 w-5" />
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) =>
+                      setDate(
+                        e.target.value
+                      )
+                    }
+                    className="border border-[#E2E8F0] rounded-sm p-0.5 text-center bg-white focus:border-[#06b6d4] outline-none flex-1 min-w-0 w-full"
+                  />
+                </div>
+
+                <div className="w-1/2 flex items-center gap-2">
+                  <label className="font-bold text-[#0F172A] whitespace-nowrap">
+                    Bill No (بل نمبر)
+                  </label>
+
+                  <input
+                    type="text"
+                    value={billNo}
+                    onChange={(e) =>
+                      setBillNo(
+                        e.target.value
+                      )
+                    }
+                    className="border border-[#E2E8F0] rounded-sm p-0.5 text-center bg-white outline-none flex-1 min-w-0 w-full"
+                  />
+                </div>
+              </div>
+
+              {/* BEOPARI */}
+
+              <div className="flex items-center gap-2 bg-cyan-100/50 p-1 rounded border border-cyan-200">
+                <label className="font-bold text-[#0F172A] whitespace-nowrap min-w-[90px]">
+                  Beopari (بیوپاری)
+                </label>
+
+                <div className="flex relative flex-1">
+                  <div
+                    className="border border-[#E2E8F0] rounded-sm p-0.5 min-h-[26px] w-full bg-white font-urdu font-bold cursor-pointer text-[#0F172A] flex items-center whitespace-normal break-words pl-8"
+                    onClick={() =>
+                      setIsBeopariSearchOpen(
+                        true
+                      )
+                    }
+                  >
+                    {selectedBeopari
+                      ? `${selectedBeopari.code} - ${selectedBeopari.nameUrdu}`
+                      : (
+                        <span className="text-gray-400 font-normal text-xs">
+                          بیوپاری منتخب کریں (Select Beopari)
+                        </span>
+                      )}
+                  </div>
+
+                  <button
+                    onClick={() =>
+                      setIsBeopariSearchOpen(
+                        true
+                      )
+                    }
+                    className="absolute left-0 top-0 bottom-0 bg-slate-100 rounded-l-sm px-2 border border-[#E2E8F0] hover:bg-slate-200"
+                  >
+                    <Search className="w-3 h-3 text-[#334155]" />
+                  </button>
+                </div>
+              </div>
+
+              {/* COPY + VEHICLE */}
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-0.5">
+                  <label className="font-bold text-[#0F172A]">
+                    Copy No (کاپی نمبر)
+                  </label>
+
+                  <input
+                    type="text"
+                    value={copyNo}
+                    onChange={(e) =>
+                      setCopyNo(
+                        e.target.value
+                      )
+                    }
+                    className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-0.5">
+                  <label className="font-bold text-[#0F172A]">
+                    Vehicle No (گاڑی نمبر)
+                  </label>
+
+                  <input
+                    type="text"
+                    value={gaariNo}
+                    onChange={(e) =>
+                      setGaariNo(
+                        e.target.value
+                      )
+                    }
+                    className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full"
+                  />
+                </div>
+              </div>
+
+              {/* BEOPARI BALANCE */}
+
+              <div className="flex items-center gap-2">
+                <label className="font-bold text-[#0F172A] whitespace-nowrap min-w-[90px]">
+                  Beopari Balance (بیوپاری کا بیلنس)
+                </label>
+
+                <input
+                  type="text"
+                  value={
+                    !selectedBeopari
+                      ? ""
+                      : beopariBalance.loading
+                      ? "Loading... (لوڈ ہو رہا ہے...)"
+                      : beopariBalance.error
+                      ? "Error (خرابی)"
+                      : formatMoney(
+                          beopariBalance.balance
+                        )
+                  }
+                  readOnly
+                  className={cn(
+                    "border border-[#E2E8F0] rounded-sm p-0.5 bg-cyan-50 text-left font-bold outline-none flex-1",
+
+                    beopariBalance.error
+                      ? "text-red-500"
+                      : "text-cyan-600"
+                  )}
+                />
+              </div>
+
+              <hr className="border-[#E2E8F0] my-0" />
+
+              {/* CUSTOMER */}
+
+              <div className="flex items-center gap-2 bg-cyan-100/50 p-1 rounded border border-cyan-200">
+                <label className="font-bold text-[#0F172A] whitespace-nowrap min-w-[90px]">
+                  Customer (خریدار)
+                </label>
+
+                <div className="flex relative flex-1">
+                  <div
+                    className="border border-[#E2E8F0] rounded-sm p-0.5 min-h-[26px] w-full bg-white font-urdu font-bold cursor-pointer text-[#0F172A] flex items-center whitespace-normal break-words pl-8"
+                    onClick={() =>
+                      setIsSearchOpen(true)
+                    }
+                  >
+                    {selectedCustomer
+                      ? `${selectedCustomer.code} - ${selectedCustomer.nameUrdu}`
+                      : (
+                        <span className="text-gray-400 font-normal text-xs">
+                          خریدار منتخب کریں (Select Customer)
+                        </span>
+                      )}
+                  </div>
+
+                  <button
+                    onClick={() =>
+                      setIsSearchOpen(true)
+                    }
+                    className="absolute left-0 top-0 bottom-0 bg-slate-100 rounded-l-sm px-2 border border-[#E2E8F0] hover:bg-slate-200"
+                  >
+                    <Search className="w-3 h-3 text-[#334155]" />
+                  </button>
+                </div>
+              </div>
+
+              {/* CUSTOMER BALANCE */}
+
+              <div className="flex items-center gap-2">
+                <label className="font-bold text-[#0F172A] whitespace-nowrap min-w-[90px]">
+                  Customer Balance (خریدار کا بیلنس)
+                </label>
+
+                <input
+                  type="text"
+                  value={
+                    !selectedCustomer
+                      ? ""
+                      : customerBalance.loading
+                      ? "Loading... (لوڈ ہو رہا ہے...)"
+                      : customerBalance.error
+                      ? "Error (خرابی)"
+                      : formatMoney(
+                          customerBalance.balance
+                        )
+                  }
+                  readOnly
+                  className={cn(
+                    "border border-[#E2E8F0] rounded-sm p-0.5 bg-cyan-50 text-left font-bold outline-none flex-1",
+
+                    customerBalance.error
+                      ? "text-red-500"
+                      : "text-cyan-600"
+                  )}
+                />
+              </div>
+
+              <hr className="border-[#E2E8F0] my-0" />
+
+              {/* ITEM */}
+
+              <div className="grid grid-cols-12 gap-2 bg-cyan-100/30 p-1.5 rounded border border-cyan-200">
+                <div className="col-span-8 flex flex-col gap-0.5">
+                  <label className="font-bold text-[#0F172A]">
+                    Item (اشیاء)
+                  </label>
+
+                  <div className="flex relative w-full">
+                    <div
+                      className="border border-[#E2E8F0] rounded-sm p-0.5 min-h-[26px] w-full bg-white font-urdu font-bold cursor-pointer text-[#0F172A] flex items-center whitespace-normal break-words pl-8"
+                      onClick={() =>
+                        setIsItemSearchOpen(
+                          true
+                        )
+                      }
+                    >
+                      {item || (
+                        <span className="text-gray-400 font-normal text-xs">
+                          Item Name (اشیاء کا نام) 
+                        </span>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() =>
+                        setIsItemSearchOpen(
+                          true
+                        )
+                      }
+                      className="absolute left-0 top-0 bottom-0 bg-slate-100 rounded-l-sm px-2 border border-[#E2E8F0] hover:bg-slate-200"
+                    >
+                      <Search className="w-3 h-3 text-[#334155]" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="col-span-4 flex flex-col gap-0.5">
+                  <label className="font-bold text-[#0F172A]">
+                    Commission (کمیشن)
+                  </label>
+
+                  <input
+                    type="number"
+                    value={commissionPct}
+                    readOnly
+                    className="border border-[#E2E8F0] rounded-sm p-0.5 bg-gray-100 text-gray-500 outline-none w-full text-center min-h-[26px] cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              {/* ITEM SIZE + PACKING */}
+
+              <div className="grid grid-cols-12 gap-2">
+                <div className="col-span-6 flex flex-col gap-0.5">
+                  <label className="font-bold text-[#0F172A]">
+                    Item Size (اشیاء کا سائز)
+                  </label>
+
+                  <div className="flex relative w-full">
+                    <div
+                      className="border border-[#E2E8F0] rounded-sm p-0.5 min-h-[26px] w-full bg-white font-bold cursor-pointer text-[#0F172A] flex items-center justify-center whitespace-nowrap"
+                      onClick={() =>
+                        setIsItemSizeSearchOpen(
+                          true
+                        )
+                      }
+                    >
+                      {itemSize || (
+                        <span className="text-gray-400 font-normal text-xs">
+                          Item Size (اشیاء کا سائز)
+                        </span>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() =>
+                        setIsItemSizeSearchOpen(
+                          true
+                        )
+                      }
+                      className="absolute left-0 top-0 bottom-0 bg-slate-100 rounded-l-sm px-2 border border-[#E2E8F0] hover:bg-slate-200"
+                    >
+                      <Search className="w-3 h-3 text-[#334155]" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="col-span-6 flex flex-col gap-0.5">
+                  <label className="font-bold text-[#0F172A]">
+                    Packing (پیکنگ)
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    value={bags}
+                    onChange={(e) =>
+                      setBags(
+                        e.target.value ===
+                          ""
+                          ? ""
+                          : Math.max(
+                              0,
+                              Number(
+                                e.target.value
+                              )
+                            )
+                      )
+                    }
+                    onKeyDown={(e) => {
+                      if (
+                        e.key === "-"
+                      ) {
+                        e.preventDefault();
+                      }
+                    }}
+                    placeholder="-"
+                    className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full text-center min-h-[26px]"
+                  />
+                </div>
+              </div>
+
+              {/* WEIGHT + RATE + TOTAL */}
+
+              <div className="grid grid-cols-12 gap-2 bg-[#06b6d4]/10 p-1.5 rounded border border-[#06b6d4]/20 items-end">
+                <div className="col-span-4 flex flex-col gap-0.5">
+                  <label className="font-bold text-[#0F172A] text-center">
+                    Weight Kg (وزن کلوگرام)
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    value={weight}
+                    onChange={(e) =>
+                      setWeight(
+                        e.target.value ===
+                          ""
+                          ? ""
+                          : Math.max(
+                              0,
+                              Number(
+                                e.target.value
+                              )
+                            )
+                      )
+                    }
+                    className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full text-center font-bold min-h-[26px]"
+                  />
+                </div>
+
+                <div className="col-span-4 flex flex-col gap-0.5">
+                  <label className="font-bold text-[#0F172A] text-center">
+                    Rate/Kg (فی کلو ریٹ)
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    value={rate}
+                    onChange={(e) =>
+                      setRate(
+                        e.target.value ===
+                          ""
+                          ? ""
+                          : Math.max(
+                              0,
+                              Number(
+                                e.target.value
+                              )
+                            )
+                      )
+                    }
+                    className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white outline-none w-full text-center font-bold text-red-500 min-h-[26px]"
+                  />
+                </div>
+
+                <div className="col-span-4 flex flex-col gap-0.5">
+                  <label className="font-bold text-[#0F172A] text-center">
+                    Total (کل)
+                  </label>
+
+                  <div className="border border-[#E2E8F0] rounded-sm p-0.5 bg-white text-center font-bold text-black min-h-[26px] flex items-center justify-center">
+                    {formatMoney(
+                      (Number(
+                        weight
+                      ) || 0) *
+                        (Number(
+                          rate
+                        ) || 0)
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* ADD ITEM */}
+
+              <button
+                onClick={
+                  handleAddLineItem
+                }
+                className="bg-[#06b6d4] text-white p-1.5 rounded-md hover:bg-cyan-600 font-bold flex items-center justify-center w-full transition-colors h-[30px] shadow-sm mt-0.5"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+
+                اشیاء شامل کریں (Add Item)
               </button>
             </div>
-            <div className="p-4 space-y-3">
-                <div className="flex items-center justify-between bg-[#F8FAFC] p-2 rounded-md border border-[#E2E8F0]/50">
-                  <span className="font-urdu text-[#0F172A] font-medium">Freight (کرایہ)</span>
-                  <input type="number" min="0" value={freight} onChange={e => setFreight(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))} onKeyDown={e => e.key === '-' && e.preventDefault()} className="w-24 p-1 rounded border border-[#E2E8F0] text-center focus:border-[#06b6d4] outline-none" />
+
+            {/* ==================================================
+                DEDUCTIONS
+            ================================================== */}
+
+            <div
+              className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm flex flex-col overflow-hidden text-xs shrink-0"
+              dir="rtl"
+            >
+              <button
+                onClick={() =>
+                  setIsDeductionsOpen(
+                    true
+                  )
+                }
+                className="bg-[#064789] text-white p-2.5 font-bold flex items-center justify-between hover:bg-[#053a70] transition-colors"
+              >
+                <span className="text-[13px]">
+                  مزید بل خرچہ (Additional Bill Expenses)
+                </span>
+
+                <div className="bg-[#06b6d4] rounded-full p-1 shadow-sm">
+                  <Plus className="h-4 w-4 text-white" />
                 </div>
-                <div className="flex items-center justify-between bg-[#F8FAFC] p-2 rounded-md border border-[#E2E8F0]/50">
-                  <span className="font-urdu text-[#0F172A] font-medium">Labor (مزدوری)</span>
-                  <input type="number" min="0" value={labor} onChange={e => setLabor(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))} onKeyDown={e => e.key === '-' && e.preventDefault()} className="w-24 p-1 rounded border border-[#E2E8F0] text-center focus:border-[#06b6d4] outline-none text-red-500 font-medium" />
-                </div>
-                <div className="flex items-center justify-between bg-[#F8FAFC] p-2 rounded-md border border-[#E2E8F0]/50">
-                  <span className="font-urdu text-[#0F172A] font-medium">Other (متفرق)</span>
-                  <input type="number" min="0" value={otherCharges} onChange={e => setOtherCharges(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))} onKeyDown={e => e.key === '-' && e.preventDefault()} className="w-24 p-1 rounded border border-[#E2E8F0] text-center focus:border-[#06b6d4] outline-none" />
-                </div>
-            </div>
-            <div className="p-3 border-t border-[#E2E8F0] bg-slate-50 flex justify-end">
-              <button onClick={() => setIsDeductionsOpen(false)} className="bg-[#06b6d4] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-cyan-600 transition-colors">
-                Save (محفوظ کریں)
               </button>
+
+              {(Number(freight) >
+                0 ||
+                Number(labor) >
+                  0 ||
+                Number(
+                  otherCharges
+                ) > 0) && (
+                <div className="p-3 bg-slate-50 flex flex-col gap-2 border-t border-[#E2E8F0]">
+                  {Number(
+                    freight
+                  ) > 0 && (
+                    <div className="flex justify-between items-center text-slate-700">
+                      <span>
+                        Freight (کرایہ)
+                      </span>
+
+                      <span className="font-bold">
+                        {formatMoney(
+                          freight
+                        )}{" "}
+                        RS
+                      </span>
+                    </div>
+                  )}
+
+                  {Number(
+                    labor
+                  ) > 0 && (
+                    <div className="flex justify-between items-center text-slate-700">
+                      <span>
+                        Labor (مزدوری)
+                      </span>
+
+                      <span className="font-bold text-red-500">
+                        {formatMoney(
+                          labor
+                        )}{" "}
+                        RS
+                      </span>
+                    </div>
+                  )}
+
+                  {Number(
+                    otherCharges
+                  ) > 0 && (
+                    <div className="flex justify-between items-center text-slate-700">
+                      <span>
+                        Other (دیگر)
+                      </span>
+
+                      <span className="font-bold">
+                        {formatMoney(
+                          otherCharges
+                        )}{" "}
+                        RS
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center border-t border-[#E2E8F0] pt-2 mt-1">
+                    <span className="font-bold text-[#0F172A]">
+                      Total (کل)
+                    </span>
+
+                    <span className="font-black text-[#0F172A]">
+                      {formatMoney(
+                        totalDeductions
+                      )}{" "}
+                      RS
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
-      )}
 
+        {/* ======================================================
+            SUCCESS MODAL
+        ====================================================== */}
 
-    </div>
+        {showToast && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 flex flex-col items-center text-center">
+              <div className="w-24 h-24 bg-cyan-50 rounded-full flex items-center justify-center mb-6">
+                <Save className="w-12 h-12 text-[#06b6d4]" />
+              </div>
+
+              <h2 className="text-2xl font-bold text-slate-800 mb-4">
+                Invoice Saved Successfully!
+              </h2>
+
+              <p
+                className="text-3xl font-urdu text-slate-800 mb-8"
+                dir="rtl"
+              >
+                انوائس کامیابی سے محفوظ ہو گیا ہے۔
+              </p>
+
+              <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6 text-sm">
+                <div className="flex justify-between">
+                  <span>
+                    Bill No
+                  </span>
+
+                  <strong>
+                    {billNo}
+                  </strong>
+                </div>
+
+                <div className="flex justify-between mt-2">
+                  <span>
+                    Net Total
+                  </span>
+
+                  <strong>
+                    Rs{" "}
+                    {formatMoney(
+                      netTotal
+                    )}
+                  </strong>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setShowToast(
+                    false
+                  );
+
+                  resetForm();
+                }}
+                className="w-full bg-[#06b6d4] text-white py-3.5 rounded-xl font-bold text-lg hover:bg-cyan-600 transition-colors"
+              >
+                ٹھیک ہے / OK
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================
+            CUSTOMER SEARCH
+        ====================================================== */}
+
+        <AccountSearchModal
+          isOpen={isSearchOpen}
+          onClose={() =>
+            setIsSearchOpen(false)
+          }
+          onSelect={(account) => {
+            setSelectedCustomer(
+              account
+            );
+
+            setIsSearchOpen(false);
+          }}
+          typeFilter="گاہک"
+        />
+
+        {/* ======================================================
+            BEOPARI SEARCH
+        ====================================================== */}
+
+        <AccountSearchModal
+          isOpen={
+            isBeopariSearchOpen
+          }
+          onClose={() =>
+            setIsBeopariSearchOpen(
+              false
+            )
+          }
+          onSelect={(account) => {
+            setSelectedBeopari(
+              account
+            );
+
+            setIsBeopariSearchOpen(
+              false
+            );
+          }}
+          typeFilter="بیوپاری"
+        />
+
+        {/* ======================================================
+            ITEM SEARCH
+        ====================================================== */}
+
+        <ItemSearchModal
+          isOpen={
+            isItemSearchOpen
+          }
+          onClose={() =>
+            setIsItemSearchOpen(
+              false
+            )
+          }
+          onSelect={(itm) => {
+            setItem(
+              itm.nameUrdu
+            );
+
+            setIsItemSearchOpen(
+              false
+            );
+          }}
+        />
+
+        {/* ======================================================
+            ITEM SIZE SEARCH
+        ====================================================== */}
+
+        <ItemSizeSearchModal
+          isOpen={
+            isItemSizeSearchOpen
+          }
+          onClose={() =>
+            setIsItemSizeSearchOpen(
+              false
+            )
+          }
+          onSelect={(size) => {
+            setItemSize(
+              size
+            );
+
+            setIsItemSizeSearchOpen(
+              false
+            );
+          }}
+        />
+
+        {/* ======================================================
+            DEDUCTIONS MODAL
+        ====================================================== */}
+
+        {isDeductionsOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div
+              className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col"
+              dir="rtl"
+            >
+              <div className="bg-[#1e293b] text-white p-3 font-bold flex items-center justify-between">
+                <span>
+                  مزید بل خرچہ
+                </span>
+
+                <button
+                  onClick={() =>
+                    setIsDeductionsOpen(
+                      false
+                    )
+                  }
+                  className="text-slate-300 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="p-4 space-y-3">
+                {/* FREIGHT */}
+
+                <div className="flex items-center justify-between bg-[#F8FAFC] p-2 rounded-md border border-[#E2E8F0]/50">
+                  <span className="font-urdu text-[#0F172A] font-medium">
+                    Freight
+                  </span>
+
+                  <input
+                    type="number"
+                    min="0"
+                    value={freight}
+                    onChange={(e) =>
+                      setFreight(
+                        e.target
+                          .value ===
+                          ""
+                          ? ""
+                          : Math.max(
+                              0,
+                              Number(
+                                e.target
+                                  .value
+                              )
+                            )
+                      )
+                    }
+                    onKeyDown={(e) => {
+                      if (
+                        e.key ===
+                        "-"
+                      ) {
+                        e.preventDefault();
+                      }
+                    }}
+                    className="w-24 p-1 rounded border border-[#E2E8F0] text-center focus:border-[#06b6d4] outline-none"
+                  />
+                </div>
+
+                {/* LABOR */}
+
+                <div className="flex items-center justify-between bg-[#F8FAFC] p-2 rounded-md border border-[#E2E8F0]/50">
+                  <span className="font-urdu text-[#0F172A] font-medium">
+                    Labor
+                  </span>
+
+                  <input
+                    type="number"
+                    min="0"
+                    value={labor}
+                    onChange={(e) =>
+                      setLabor(
+                        e.target
+                          .value ===
+                          ""
+                          ? ""
+                          : Math.max(
+                              0,
+                              Number(
+                                e.target
+                                  .value
+                              )
+                            )
+                      )
+                    }
+                    onKeyDown={(e) => {
+                      if (
+                        e.key ===
+                        "-"
+                      ) {
+                        e.preventDefault();
+                      }
+                    }}
+                    className="w-24 p-1 rounded border border-[#E2E8F0] text-center focus:border-[#06b6d4] outline-none text-red-500 font-medium"
+                  />
+                </div>
+
+                {/* OTHER */}
+
+                <div className="flex items-center justify-between bg-[#F8FAFC] p-2 rounded-md border border-[#E2E8F0]/50">
+                  <span className="font-urdu text-[#0F172A] font-medium">
+                    Other
+                  </span>
+
+                  <input
+                    type="number"
+                    min="0"
+                    value={
+                      otherCharges
+                    }
+                    onChange={(e) =>
+                      setOtherCharges(
+                        e.target
+                          .value ===
+                          ""
+                          ? ""
+                          : Math.max(
+                              0,
+                              Number(
+                                e.target
+                                  .value
+                              )
+                            )
+                      )
+                    }
+                    onKeyDown={(e) => {
+                      if (
+                        e.key ===
+                        "-"
+                      ) {
+                        e.preventDefault();
+                      }
+                    }}
+                    className="w-24 p-1 rounded border border-[#E2E8F0] text-center focus:border-[#06b6d4] outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 border-t border-[#E2E8F0] bg-slate-50 flex justify-end">
+                <button
+                  onClick={() =>
+                    setIsDeductionsOpen(
+                      false
+                    )
+                  }
+                  className="bg-[#06b6d4] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-cyan-600 transition-colors"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </>
   );
 }
