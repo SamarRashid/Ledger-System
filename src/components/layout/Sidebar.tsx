@@ -28,11 +28,21 @@ const navLinks = [
   { href: "/dashboard", icon: LayoutDashboard, labelEn: "Dashboard", labelUr: "ڈیش بورڈ" },
   { href: "/summaries", icon: PieChart, labelEn: "Daily Summaries", labelUr: "روزانہ خلاصہ" },
   { href: "/billing", icon: FileText, labelEn: "Billing / Invoice", labelUr: "بیوپاری بل" },
-  { href: "/ledger", icon: Users, labelEn: "Customer Ledger", labelUr: "گاہک کھاتہ" },
+
   { href: "/cash-receipt", icon: Receipt, labelEn: "Cash Receipt", labelUr: "کیش وصولی" },
   { href: "/cash-payment", icon: CreditCard, labelEn: "Cash Payment", labelUr: "نام ادائیگی" },
   { href: "/receipts-payments", icon: ArrowLeftRight, labelEn: "Receipts", labelUr: "رسیدیں" },
   { href: "/settings", icon: Settings, labelEn: "Settings", labelUr: "سیٹنگز" },
+  { 
+    href: "/ledgers-menu", 
+    icon: Users, 
+    labelEn: "Ledgers", 
+    labelUr: "کھاتہ جات",
+    subItems: [
+      { href: "/ledger", icon: Users, labelEn: "Customer Ledger", labelUr: "گاہک کھاتہ" },
+      { href: "/supplier-ledger", icon: Users, labelEn: "Supplier Ledger", labelUr: "سپلائر کھاتہ" },
+    ]
+  },
   { 
     href: "/configurations", 
     icon: Settings, 
@@ -83,7 +93,8 @@ export function Sidebar({ isPinned, setIsPinned, isMobileOpen, setIsMobileOpen }
   
   const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({
     "/configurations": pathname.toLowerCase().includes("configurations"),
-    "/reports": pathname.toLowerCase().includes("reports") || pathname.toLowerCase().includes("katcha-chitha")
+    "/reports": pathname.toLowerCase().includes("reports") || pathname.toLowerCase().includes("katcha-chitha"),
+    "/ledgers-menu": pathname.toLowerCase().includes("ledger")
   });
 
   const toggleSubmenu = (href: string) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Save, Printer, Plus, ChevronDown, ChevronUp, X, CheckCircle2, Maximize } from "lucide-react";
+import { Search, Save, Printer, Plus, ChevronDown, ChevronUp, X, CheckCircle2, Maximize, Edit2, Trash2 } from "lucide-react";
 import { cn } from "@/components/layout/Header";
 import { AccountSearchModal, Account } from "@/components/AccountSearchModal";
 import { ItemSearchModal } from "@/components/ItemSearchModal";
@@ -22,6 +22,8 @@ type LineItem = {
 
 export default function BillingPage() {
   const [isFullScreenUI, setIsFullScreenUI] = useState<boolean>(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editingLineItemId, setEditingLineItemId] = useState<string | null>(null);
 
   useEffect(() => {
     const onFullscreenChange = () => {
@@ -49,7 +51,78 @@ export default function BillingPage() {
         console.error("Failed to fetch latest bill no", e);
       }
     };
-    fetchLatestBillNo();
+    const searchParams = new URLSearchParams(window.location.search);
+    const id = searchParams.get("editId");
+    if (id) {
+      setEditId(id);
+      const fetchBillForEdit = async () => {
+        try {
+          const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+          const res = await fetch(`${API_URL}/api/bills`).catch(() => null);
+          if (res && res.ok) {
+            const data = await res.json();
+            if (data.success && data.data) {
+              const billToEdit = data.data.find((b: any) => b._id === id);
+              if (billToEdit) {
+                setBillNo(billToEdit.billNo);
+                setDate(billToEdit.date ? billToEdit.date.split("T")[0] : new Date().toISOString().split("T")[0]);
+                setCopyNo(billToEdit.copyNo || "");
+                setGaariNo(billToEdit.vehicleNo || "");
+                setSelectedBeopari(billToEdit.beopari);
+                setLineItems(billToEdit.lineItems || []);
+                setNote(billToEdit.note || "");
+                
+                if (billToEdit.deductions && billToEdit.deductions.length > 0) {
+                  const expenses = billToEdit.deductions.map((d: any) => ({
+                    _id: d.expenseId || Math.random().toString(),
+                    nameEnglish: d.nameEn,
+                    nameUrdu: d.nameUr,
+                    rate: d.amount,
+                    calculationType: 'Fixed',
+                    sellerApplicable: d.sellerApplicable,
+                    buyerApplicable: d.buyerApplicable
+                  }));
+                  setAddedExpenses(expenses);
+                  
+                  const dynamicDeds: Record<string, number> = {};
+                  expenses.forEach((e: any) => {
+                    dynamicDeds[e._id] = e.rate;
+                  });
+                  setDynamicDeductions(dynamicDeds);
+                }
+                
+                const lineItemIdToEdit = searchParams.get("lineItemId");
+                if (lineItemIdToEdit && billToEdit.lineItems) {
+                  const li = billToEdit.lineItems.find((l: any) => l.id === lineItemIdToEdit);
+                  if (li) {
+                    setEditingLineItemId(li.id);
+                    setItem(li.item || "");
+                    setItemSize(li.itemSize || "");
+                    setBags(li.bags || "");
+                    setWeight(li.weight || "");
+                    setRate(li.rate || "");
+                    setSelectedCustomer(li.customer || null);
+                    setCommissionPct(li.commissionPct || 8);
+                    
+                    setLineItems([li]);
+                    setHiddenLineItems(billToEdit.lineItems.filter((l: any) => l.id !== lineItemIdToEdit));
+                  } else {
+                    setLineItems(billToEdit.lineItems || []);
+                  }
+                } else {
+                  setLineItems(billToEdit.lineItems || []);
+                }
+              }
+            }
+          }
+        } catch (e) {
+           console.error("Failed to fetch bill for edit", e);
+        }
+      };
+      fetchBillForEdit();
+    } else {
+      fetchLatestBillNo();
+    }
   }, []);
 
   const [showToast, setShowToast] = useState<boolean>(false);
@@ -89,14 +162,16 @@ export default function BillingPage() {
 
   // Line Items State
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [hiddenLineItems, setHiddenLineItems] = useState<LineItem[]>([]);
   const [addedExpenses, setAddedExpenses] = useState<Expense[]>([]);
   const [dynamicDeductions, setDynamicDeductions] = useState<Record<string, number | "">>({});
 
   // Derived Values
-  const totalWeight: number = lineItems.reduce((sum, li) => sum + li.weight, 0);
-  const totalAmount: number = lineItems.reduce((sum, li) => sum + li.amount, 0);
-  const totalCommission: number = lineItems.reduce((sum, li) => sum + (li.amount * ((Number(li.commissionPct) || 0) / 100)), 0); 
-  const totalBags: number = lineItems.reduce((sum, li) => sum + (Number(li.bags) || 0), 0);
+  const allItemsForTotals = [...lineItems, ...hiddenLineItems];
+  const totalWeight: number = allItemsForTotals.reduce((sum, li) => sum + li.weight, 0);
+  const totalAmount: number = allItemsForTotals.reduce((sum, li) => sum + li.amount, 0);
+  const totalCommission: number = allItemsForTotals.reduce((sum, li) => sum + (li.amount * ((Number(li.commissionPct) || 0) / 100)), 0); 
+  const totalBags: number = allItemsForTotals.reduce((sum, li) => sum + (Number(li.bags) || 0), 0);
   
   // Calculate deductions dynamically
   const getCalculatedExpense = (e: any) => {
@@ -122,16 +197,32 @@ export default function BillingPage() {
     const r = Number(rate);
     const b = Number(bags) || 0;
     
-    setLineItems([...lineItems, {
-      id: Math.random().toString(36).substring(7),
-      item,
-      bags: b,
-      weight: w,
-      rate: r,
-      amount: w * r,
-      customer: selectedCustomer,
-      commissionPct: commissionPct
-    }]);
+    if (editingLineItemId) {
+      setLineItems(lineItems.map(li => li.id === editingLineItemId ? {
+        ...li,
+        item,
+        itemSize,
+        bags: b,
+        weight: w,
+        rate: r,
+        amount: w * r,
+        customer: selectedCustomer,
+        commissionPct
+      } : li));
+      setEditingLineItemId(null);
+    } else {
+      setLineItems([...lineItems, {
+        id: Math.random().toString(36).substring(7),
+        item,
+        itemSize,
+        bags: b,
+        weight: w,
+        rate: r,
+        amount: w * r,
+        customer: selectedCustomer,
+        commissionPct: commissionPct
+      }]);
+    }
 
     // Reset inputs except Beopari, CopyNo, and GaariNo
     setSelectedCustomer(null);
@@ -161,7 +252,9 @@ export default function BillingPage() {
     setOtherCharges("");
     setNote("");
     setLineItems([]);
-    setBillNo(prev => (parseInt(prev) ? parseInt(prev) + 1 : 1001).toString());
+    if (!editId) {
+      setBillNo(prev => (parseInt(prev) ? parseInt(prev) + 1 : 1001).toString());
+    }
   };
 
   const handleSave = async () => {
@@ -178,7 +271,7 @@ export default function BillingPage() {
       copyNo,
       vehicleNo: gaariNo,
       beopari: selectedBeopari,
-      lineItems,
+      lineItems: [...lineItems, ...hiddenLineItems],
       deductions: addedExpenses.map(e => ({
         expenseId: e._id,
         nameEn: e.nameEnglish,
@@ -198,8 +291,10 @@ export default function BillingPage() {
     };
 
     try {
-      const response = await fetch(`${API_URL}/api/bills`, {
-        method: "POST",
+      const url = editId ? `${API_URL}/api/bills/${editId}` : `${API_URL}/api/bills`;
+      const method = editId ? "PUT" : "POST";
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(invoicePayload)
       }).catch(() => null);
@@ -255,6 +350,12 @@ export default function BillingPage() {
             existing = JSON.parse(existingStr);
           } catch (e) {}
         }
+        
+        if (editId) {
+          // Remove existing records for this bill to avoid duplicates when editing
+          existing = existing.filter((record: any) => !record.description?.includes(`بل نمبر: ${billNo}`));
+        }
+        
         localStorage.setItem("katcha_chitha_records", JSON.stringify([...newRecords, beopariRecord, ...existing]));
       }
 
@@ -379,7 +480,7 @@ export default function BillingPage() {
                     <th className="p-2 border-l border-[#E2E8F0] text-center text-[11px] font-bold text-[#334155] leading-tight">
                       Rate/Kg<br/><span className="font-urdu font-normal text-[10px] opacity-80">ریٹ فی کلو</span>
                     </th>
-                    <th className="p-2 text-center text-[11px] font-bold text-[#334155] leading-tight">
+                    <th className="p-2 border-l border-[#E2E8F0] text-center text-[11px] font-bold text-[#334155] leading-tight">
                       Total<br/><span className="font-urdu font-normal text-[10px] opacity-80">کل رقم</span>
                     </th>
                   </tr>
@@ -397,7 +498,7 @@ export default function BillingPage() {
                   ))}
                   {lineItems.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-slate-400 font-urdu text-sm">کوئی ریکارڈ نہیں</td>
+                      <td colSpan={7} className="p-8 text-center text-slate-400 font-urdu text-sm">کوئی ریکارڈ نہیں</td>
                     </tr>
                   )}
                 </tbody>
@@ -608,8 +709,8 @@ export default function BillingPage() {
               </div>
             </div>
 
-            <button onClick={handleAddLineItem} className="bg-[#06b6d4] text-white p-1.5 rounded-md hover:bg-cyan-600 font-bold flex items-center justify-center w-full transition-colors h-[30px] shadow-sm mt-0.5" title="شامل کریں">
-              <Plus className="w-4 h-4 mr-1" /> اشیاء شامل کریں
+            <button onClick={handleAddLineItem} className="bg-[#06b6d4] text-white p-1.5 rounded-md hover:bg-cyan-600 font-bold flex items-center justify-center w-full transition-colors h-[30px] shadow-sm mt-0.5" title={editingLineItemId ? "اپ ڈیٹ کریں" : "شامل کریں"}>
+              <Plus className="w-4 h-4 mr-1" /> {editingLineItemId ? "اشیاء اپ ڈیٹ کریں" : "اشیاء شامل کریں"}
             </button>
           </div>
 
@@ -687,12 +788,16 @@ export default function BillingPage() {
             <div className="w-24 h-24 bg-cyan-50 rounded-full flex items-center justify-center mb-6">
               <Save className="w-12 h-12 text-[#06b6d4]" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-800 mb-4">Invoice Saved Successfully!</h2>
-            <p className="text-3xl font-urdu text-slate-800 mb-8" dir="rtl">انوائس کامیابی سے محفوظ ہو گیا ہے۔</p>
+            <h2 className="text-2xl font-bold text-slate-800 mb-4">{editId ? "Invoice Updated Successfully!" : "Invoice Saved Successfully!"}</h2>
+            <p className="text-3xl font-urdu text-slate-800 mb-8" dir="rtl">{editId ? "انوائس کامیابی سے اپڈیٹ ہو گیا ہے۔" : "انوائس کامیابی سے محفوظ ہو گیا ہے۔"}</p>
             <button 
               onClick={() => {
                 setShowToast(false);
-                resetForm();
+                if (editId) {
+                  window.location.href = "/reports/daily-sale-book";
+                } else {
+                  resetForm();
+                }
               }} 
               className="w-full bg-[#06b6d4] text-white py-3.5 rounded-xl font-bold text-lg hover:bg-cyan-600 transition-colors"
             >
