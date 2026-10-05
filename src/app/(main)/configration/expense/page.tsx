@@ -190,9 +190,7 @@ export default function ExpenseConfigPage(): React.JSX.Element {
         }
       }
       
-      if (!success) {
-         loadExpenses();
-      }
+      await loadExpenses();
       handleCloseModal();
     } catch (e) {
       console.error(e);
@@ -249,6 +247,7 @@ export default function ExpenseConfigPage(): React.JSX.Element {
             title: "Deleted! (ڈیلیٹ ہو گیا!)", 
             message: "Expense deleted successfully (خرچہ کامیابی سے ڈیلیٹ ہو گیا)" 
           });
+          await loadExpenses();
         }
       } catch (e) {
         console.error(e);

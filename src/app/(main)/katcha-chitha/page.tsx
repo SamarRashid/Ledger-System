@@ -13,13 +13,42 @@ import {
 } from "lucide-react";
 import { toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
+import { ExpenseSearchModal, Expense } from "@/components/ExpenseSearchModal";
+import { X, Plus } from "lucide-react";
 
 const CustomerRow = ({ ct, cIdx, date }: { ct: any, cIdx: number, date: string }) => {
   const [showBillOptions, setShowBillOptions] = useState(false);
-  const [mazeedKharcha, setMazeedKharcha] = useState<number>(0);
   const [isSharing, setIsSharing] = useState(false);
+  const [isExpenseSearchOpen, setIsExpenseSearchOpen] = useState(false);
+  const [addedExpenses, setAddedExpenses] = useState<Expense[]>([]);
+  const [dynamicDeductions, setDynamicDeductions] = useState<Record<string, number | "">>({});
 
-  const netTotal = ct.amount + ct.commission + mazeedKharcha;
+  const getCalculatedExpense = (e: Expense) => {
+    let totalWeight = 0;
+    let totalBags = 0;
+    if (ct.items && Array.isArray(ct.items)) {
+      ct.items.forEach((item: any) => {
+        totalWeight += Number(item.weight) || 0;
+        totalBags += Number(item.bags) || 0;
+      });
+    }
+    
+    if (e.calculationType === "Total") return e.rate;
+    if (e.calculationType === "Weight" || e.calculationType === "Per Maund") return e.rate * totalWeight;
+    if (e.calculationType === "Bags" || e.calculationType === "Per Bag") return e.rate * totalBags;
+    if (e.calculationType === "Percentage") {
+      const totalItemAmount = ct.amount || 0;
+      return (totalItemAmount * e.rate) / 100;
+    }
+    return 0;
+  };
+
+  const calculatedMazeedKharcha = addedExpenses.reduce((sum, e) => {
+    const manualVal = dynamicDeductions[e._id];
+    return sum + (manualVal !== undefined && manualVal !== "" ? Number(manualVal) : getCalculatedExpense(e));
+  }, 0);
+
+  const netTotal = ct.amount + ct.commission + calculatedMazeedKharcha;
 
   const handleShare = async () => {
     const element = document.getElementById(`printable-bill-${cIdx}-${ct.customer?.code}`);
@@ -111,14 +140,14 @@ const CustomerRow = ({ ct, cIdx, date }: { ct: any, cIdx: number, date: string }
               <span className="font-urdu font-bold">کمیشن:</span>
               <span className="font-bold">{ct.commission.toLocaleString()}</span>
             </div>
-            {mazeedKharcha > 0 && (
+            {addedExpenses.length > 0 && (
               <>
                 <div className="flex gap-2 text-slate-500 items-center">
                   <span className="font-urdu font-bold text-xl">+</span>
                 </div>
                 <div className="flex gap-2 text-slate-500 items-center">
                   <span className="font-urdu font-bold">مزید خرچہ:</span>
-                  <span className="font-bold">{mazeedKharcha.toLocaleString()}</span>
+                  <span className="font-bold">{calculatedMazeedKharcha.toLocaleString()}</span>
                 </div>
               </>
             )}
@@ -144,33 +173,78 @@ const CustomerRow = ({ ct, cIdx, date }: { ct: any, cIdx: number, date: string }
             Create Bill (بل بنائیں)
           </button>
         ) : (
-          <div className="flex items-center gap-4 flex-wrap justify-end">
-            <div className="flex items-center gap-2">
-              <label className="font-urdu font-bold text-sm text-slate-600 dark:text-slate-300">مزید خرچہ (Amed/Kharcha):</label>
-              <input 
-                type="number" 
-                min="0"
-                value={mazeedKharcha || ''} 
-                onChange={(e) => setMazeedKharcha(Number(e.target.value) || 0)}
-                className="w-24 px-2 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg outline-none focus:border-emerald-500 dark:bg-slate-700 dark:text-white"
-                placeholder="0"
-              />
+          <div className="flex flex-col gap-3 w-full">
+            <div className="flex items-center gap-4 flex-wrap justify-end">
+              <button 
+                onClick={() => setIsExpenseSearchOpen(true)}
+                className="bg-[#06b6d4] text-white px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-cyan-600 transition-colors flex items-center gap-1 shadow-sm"
+              >
+                <Plus className="h-4 w-4" /> مزید خرچہ (Add Expense)
+              </button>
+              
+              <button
+                type="button"
+                onClick={handleShare}
+                disabled={isSharing}
+                className="bg-[#10B981] hover:bg-[#059669] text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors shadow-sm disabled:opacity-50"
+              >
+                {isSharing ? 'Generating...' : <><Share2 className="w-4 h-4" /> Share (شیئر)</>}
+              </button>
+              <button 
+                onClick={() => setShowBillOptions(false)}
+                className="px-4 py-2 text-slate-500 font-bold hover:text-slate-700 text-sm"
+              >
+                Cancel
+              </button>
             </div>
             
-            <button
-              onClick={handleShare}
-              disabled={isSharing}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-colors text-sm shadow-sm disabled:opacity-50"
-            >
-              <Share2 className="w-4 h-4" />
-              {isSharing ? "Generating..." : "Share (شیئر)"}
-            </button>
-            <button 
-              onClick={() => setShowBillOptions(false)}
-              className="text-xs font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-            >
-              Cancel
-            </button>
+            {addedExpenses.length > 0 && (
+              <div className="bg-white rounded-lg border border-slate-200 overflow-hidden text-xs mt-2 w-full max-w-xl self-end" dir="rtl">
+                <div className="bg-slate-50 border-b border-slate-200 p-2 font-bold text-slate-700">شامل کردہ اخراجات</div>
+                <table className="w-full text-center">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="p-1.5 font-bold text-slate-600">خرچہ نام</th>
+                      <th className="p-1.5 font-bold text-slate-600">ریٹ</th>
+                      <th className="p-1.5 font-bold text-slate-600">رقم</th>
+                      <th className="p-1.5 font-bold text-slate-600 w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {addedExpenses.map(e => (
+                      <tr key={e._id}>
+                        <td className="p-1.5 font-urdu font-bold">{e.nameUrdu} <span className="font-sans font-normal text-[9px] text-slate-500 block">{e.nameEnglish}</span></td>
+                        <td className="p-1.5 font-sans font-bold">{e.rate} {e.calculationType === 'Percentage' ? '%' : 'RS'}<span className="font-urdu font-normal text-[9px] text-slate-500 block">{e.calculationType === 'Total' ? 'ٹوٹل' : e.calculationType === 'Weight' ? 'وزن' : e.calculationType === 'Percentage' ? 'فیصد' : 'فکسڈ'}</span></td>
+                        <td className="p-1.5">
+                          <input 
+                            type="number" 
+                            placeholder={Math.round(getCalculatedExpense(e)).toString()} 
+                            value={dynamicDeductions[e._id] !== undefined ? dynamicDeductions[e._id] : ""} 
+                            onChange={(ev) => setDynamicDeductions({...dynamicDeductions, [e._id]: ev.target.value === "" ? "" : Number(ev.target.value)})}
+                            className="border border-slate-200 rounded p-1 w-20 text-center font-bold outline-none focus:border-[#06b6d4]" 
+                          />
+                        </td>
+                        <td className="p-1.5">
+                          <button onClick={() => setAddedExpenses(addedExpenses.filter(x => x._id !== e._id))} className="text-red-500 hover:text-red-700 bg-red-50 p-1 rounded-md">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            
+            <ExpenseSearchModal 
+              isOpen={isExpenseSearchOpen} 
+              onClose={() => setIsExpenseSearchOpen(false)} 
+              onSelect={(exp) => {
+                if (!addedExpenses.find(e => e._id === exp._id)) {
+                  setAddedExpenses([...addedExpenses, exp]);
+                }
+              }}
+            />
           </div>
         )}
       </div>
