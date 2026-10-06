@@ -343,14 +343,17 @@ export default function BillingPage() {
           !response.ok ||
           !data.success
         ) {
-          throw new Error(
-            data.message ||
-              "Failed to fetch balance"
-          );
+          // Default to 0 if customer not found or no balance available
+          setBalance({
+            loading: false,
+            balance: 0,
+            error: false,
+          });
+          return;
         }
 
         const balanceData: BalanceData =
-          data.data || {};
+          data.data || {}
 
         const remainingBalance =
           Number(
